@@ -5,49 +5,18 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title id="pageTitle">Quick Selection & Sorter - Demo by Moodify Preset</title>
     
-    <!-- 1. SCRIPT PENGATURAN HARUS DIMUAT LEBIH DULU -->
     <script src="pengaturan.js"></script>
 
-    <!-- 2. SCRIPT PELACAKAN IP, KUNCI LAYAR & TIMER -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script>
         const db = supabase.createClient(CONFIG_APP.supabaseUrl, CONFIG_APP.supabaseKey);
         let demoTimerInterval;
+        let userIpGlobal = null;
 
-        // Fungsi Memulai Waktu Mundur 5 Menit (300 Detik)
-        function startDemoTimer() {
-            let timeLeft = 300; 
-            const timerContainer = document.getElementById('demoTimerContainer');
-            const timerDisplay = document.getElementById('demoTimerDisplay');
-            
-            // Munculkan timer di layar
-            timerContainer.classList.remove('hidden');
-            timerContainer.classList.add('flex');
-
-            demoTimerInterval = setInterval(() => {
-                timeLeft--;
-                
-                // Format MM:SS
-                let m = Math.floor(timeLeft / 60).toString().padStart(2, '0');
-                let s = (timeLeft % 60).toString().padStart(2, '0');
-                timerDisplay.innerText = `${m}:${s}`;
-
-                // Jika waktu habis
-                if (timeLeft <= 0) {
-                    clearInterval(demoTimerInterval);
-                    lockAppDemo(); // Kunci aplikasi seketika!
-                }
-            }, 1000);
-        }
-
-        // Fungsi Global untuk Mengunci Layar Seketika
         function lockAppDemo() {
-            // Hentikan timer jika ada
-            if (typeof demoTimerInterval !== 'undefined') clearInterval(demoTimerInterval);
-
+            if (demoTimerInterval) clearInterval(demoTimerInterval);
             const modal = document.getElementById('sessionEndedModal');
             const content = document.getElementById('sessionEndedContent');
-            
             const alertBox = document.getElementById('customAlert');
             if(alertBox) alertBox.classList.add('-translate-y-32', 'opacity-0');
 
@@ -61,37 +30,79 @@
             }, 10);
         }
 
-        async function checkDemoAccess() {
+        async function burnDemoAndLock() {
+            lockAppDemo(); // Kunci aplikasi seketika agar tidak stuck
+            
+            localStorage.removeItem('demo_is_running'); 
+            localStorage.setItem('demo_locked', 'true');
+            
+            if (userIpGlobal) {
+                // Eksekusi input ke database di latar belakang
+                await db.from('demo_tracking').insert([{ ip_address: userIpGlobal }]);
+            }
+        }
+
+        function startDemoTimer() {
+            let timeLeft = 300; 
+            const timerContainer = document.getElementById('demoTimerContainer');
+            const timerDisplay = document.getElementById('demoTimerDisplay');
+            
+            timerContainer.classList.remove('hidden');
+            timerContainer.classList.add('flex');
+
+            demoTimerInterval = setInterval(() => {
+                timeLeft--;
+                let m = Math.floor(timeLeft / 60).toString().padStart(2, '0');
+                let s = (timeLeft % 60).toString().padStart(2, '0');
+                timerDisplay.innerText = `${m}:${s}`;
+
+                if (timeLeft <= 0) {
+                    clearInterval(demoTimerInterval);
+                    burnDemoAndLock(); // Waktu habis, catat IP & Kunci!
+                }
+            }, 1000);
+        }
+
+        async function initDemoTracking() {
+            if (localStorage.getItem('demo_locked') === 'true') {
+                lockAppDemo();
+                return;
+            }
+
             try {
                 const ipRes = await fetch('https://api.ipify.org?format=json');
                 const ipData = await ipRes.json();
-                const userIp = ipData.ip;
+                userIpGlobal = ipData.ip;
 
                 const { data, error } = await db
                     .from('demo_tracking')
                     .select('ip_address')
-                    .eq('ip_address', userIp)
+                    .eq('ip_address', userIpGlobal)
                     .maybeSingle(); 
 
-                if (error) console.error("Error cek IP Supabase:", error);
-
                 if (data) {
+                    localStorage.setItem('demo_locked', 'true');
                     lockAppDemo();
                 } else {
-                    const { error: insertError } = await db.from('demo_tracking').insert([{ ip_address: userIp }]);
-                    if (insertError) {
-                        console.error("Gagal menyimpan IP:", insertError);
+                    if (localStorage.getItem('demo_is_running') === 'true') {
+                        burnDemoAndLock();
                     } else {
-                        // Jika IP baru dan berhasil disimpan, jalankan TIMER
+                        localStorage.setItem('demo_is_running', 'true');
                         startDemoTimer();
                     }
                 }
             } catch (err) {
-                console.error("Sistem demo error:", err); 
+                console.error("Gagal inisiasi IP:", err); 
+                if (localStorage.getItem('demo_is_running') === 'true') {
+                    burnDemoAndLock();
+                } else {
+                    localStorage.setItem('demo_is_running', 'true');
+                    startDemoTimer();
+                }
             }
         }
         
-        checkDemoAccess();
+        initDemoTracking();
     </script>
 
     <script>
@@ -311,8 +322,7 @@
             <i class="fa-solid fa-circle-info mt-0.5 text-blue-600 dark:text-blue-400"></i>
             <div>
                 <strong class="font-bold block mb-1">Informasi Penting Mode Demo:</strong>
-                Gunakan browser <b>Google Chrome</b> atau <b>Microsoft Edge</b>. Aplikasi ini mencari dan menyalin foto secara otomatis dan <b>dibatasi maksimal memproses 15 foto</b>. <br>
-                <span class="text-red-600 dark:text-red-400 font-bold mt-1 block"><i class="fa-solid fa-triangle-exclamation"></i> Peringatan: Jangan muat ulang (refresh) halaman ini agar sesi uji coba Anda tidak hangus (berlaku 1x per IP).</span>
+                Gunakan browser <b>Google Chrome</b> atau <b>Microsoft Edge</b>. Aplikasi ini mencari dan menyalin foto secara otomatis dan <b>dibatasi maksimal memproses 15 foto</b>.
             </div>
         </div>
 
@@ -508,7 +518,7 @@
             const ta = document.createElement("textarea"); ta.value = txt; ta.style.position = "fixed"; document.body.appendChild(ta); ta.focus(); ta.select();
             try { if (document.execCommand('copy')) showAlert(TRANSLATIONS[appState.lang].alertCopy, 'success'); } catch(e){} document.body.removeChild(ta);
             
-            lockAppDemo();
+            burnDemoAndLock();
         }
 
         function downloadList() {
@@ -519,7 +529,7 @@
             const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([txt], { type: 'text/plain' }));
             a.download = `List_Pilihan_${(appState.clientName || 'klien').replace(/\s+/g, '_')}.txt`; document.body.appendChild(a); a.click(); document.body.removeChild(a);
             
-            lockAppDemo();
+            burnDemoAndLock();
         }
 
         function sendToWhatsApp() {
@@ -530,7 +540,7 @@
             
             if (wa) { 
                 window.open(`https://wa.me/${wa}?text=${encodeURIComponent(txt)}`, '_blank'); 
-                lockAppDemo(); 
+                burnDemoAndLock(); 
             } else {
                 copyListOnly();
             }
@@ -645,7 +655,8 @@
             } catch (e) { addLog(`Error: ${e.message}`, "error"); } 
             finally { 
                 b.disabled = false; b.innerHTML = `<i class="fa-solid fa-bolt mr-2"></i> Mulai Sortir & Copy File (Maks 15 Foto)`; b.className = "w-full py-4 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl flex items-center justify-center gap-2 shadow-lg shadow-blue-600/30 mb-6 text-lg"; 
-                lockAppDemo();
+                
+                burnDemoAndLock();
             }
         }
     </script>
