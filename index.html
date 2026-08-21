@@ -18,6 +18,7 @@
                 const ipData = await ipRes.json();
                 const userIp = ipData.ip;
 
+                // Cek apakah IP sudah terdaftar
                 const { data, error } = await supabase
                     .from('demo_tracking')
                     .select('ip_address')
@@ -25,14 +26,16 @@
                     .single();
 
                 if (data) {
+                    // Jika IP sudah ada, blokir seluruh halaman
                     document.documentElement.innerHTML = `
                         <head><title>Sesi Demo Berakhir</title></head>
                         <body style="display:flex; flex-direction:column; align-items:center; justify-content:center; height:100vh; background:#0f172a; color:white; font-family:sans-serif; text-align:center; padding:20px; margin:0;">
                             <h1 style="font-size:24px; margin-bottom:10px;">⏳ Sesi Demo Anda Telah Berakhir</h1>
-                            <p style="color:#94a3b8; margin-bottom:20px; max-width: 400px; line-height: 1.6;">Terima kasih telah mencoba pengalaman aplikasi ini. Versi demo hanya dapat diakses satu kali per perangkat.</p>
+                            <p style="color:#94a3b8; margin-bottom:20px; max-width: 400px; line-height: 1.6;">Terima kasih telah mencoba pengalaman aplikasi ini. Sesuai kebijakan, versi demo hanya dapat diakses <b>satu kali</b> per IP Address (Perangkat/WiFi).</p>
                             <a href="https://moodifypreset.myscalev.com/coquickselectandsorter" style="background:#2563eb; color:white; padding:12px 24px; border-radius:8px; text-decoration:none; font-weight:bold;">Beli Versi Full Sekarang</a>
                         </body>`;
                 } else {
+                    // Jika IP belum ada, catat IP tersebut
                     await supabase.from('demo_tracking').insert([{ ip_address: userIp }]);
                 }
             } catch (err) {
@@ -148,7 +151,6 @@
                     <i class="fa-solid fa-camera-retro text-[150px]"></i>
                 </div>
                 <div class="relative z-10">
-                    <!-- FIX: Menghapus emoji yang rusak dan mengganti dengan 👋 -->
                     <h2 class="text-2xl md:text-3xl font-bold mb-1"><span data-i18n="welcomeTitle">Hallo</span>, <span id="displayClientName" class="text-blue-400 capitalize">Kakak</span> 👋</h2>
                     <p class="text-slate-300 text-sm md:text-base leading-relaxed" data-i18n="welcomeDesc">Selamat datang di portal seleksi foto.</p>
                 </div>
@@ -205,9 +207,8 @@
                         <h3 class="font-bold text-xl text-slate-800 dark:text-white flex items-center gap-2">
                             <span id="currentFolderDisplay" data-i18n="galleryTitle">Koleksi Foto</span>
                         </h3>
-                        <!-- FIX: Mengubah ikon aneh dengan tag FontAwesome yang benar -->
                         <p class="text-sm text-slate-500 dark:text-slate-400 mt-1" data-i18n="galleryDesc">Klik gambar untuk memilih. Klik ikon <i class="fa-solid fa-magnifying-glass-plus text-slate-800 dark:text-white mx-1"></i> untuk perbesar & tambah catatan.</p>
-                        <p class="text-xs text-yellow-600 font-bold mt-1">Versi demo dibatasi menampilkan maksimal 15 foto.</p>
+                        <p class="text-xs text-yellow-600 font-bold mt-1">Versi demo menampilkan maksimal 30 foto, batas pilihan maksimal 15 foto.</p>
                     </div>
                     <div class="flex flex-wrap items-center gap-2">
                         <div class="relative">
@@ -258,7 +259,8 @@
             <i class="fa-solid fa-circle-info mt-0.5 text-blue-600 dark:text-blue-400"></i>
             <div>
                 <strong class="font-bold block mb-1">Informasi Penting Mode Demo:</strong>
-                Gunakan browser <b>Google Chrome</b> atau <b>Microsoft Edge</b>. Aplikasi ini akan mencari dan menyalin foto secara otomatis. <b>Dibatasi maksimal memproses 15 foto</b>.
+                Gunakan browser <b>Google Chrome</b> atau <b>Microsoft Edge</b>. Aplikasi ini akan mencari dan menyalin foto secara otomatis dan <b>dibatasi maksimal memproses 15 foto</b>. <br>
+                <span class="text-red-600 dark:text-red-400 font-bold mt-1 block"><i class="fa-solid fa-triangle-exclamation"></i> Peringatan: Jangan muat ulang (refresh) halaman ini agar sesi uji coba Anda tidak hangus (berlaku 1x per IP).</span>
             </div>
         </div>
 
@@ -348,7 +350,6 @@
     <!-- MODAL POPUP PREMIUM (NEW) -->
     <div id="premiumModal" class="fixed inset-0 bg-slate-900/80 backdrop-blur-sm z-[100] hidden flex-col justify-center items-center opacity-0 transition-opacity duration-300 px-4">
         <div class="bg-white dark:bg-slate-800 border border-transparent dark:border-slate-700 rounded-3xl max-w-md w-full p-8 shadow-2xl transform scale-95 transition-transform duration-300 text-center relative" id="premiumContent">
-            <!-- Icon Lock -->
             <div class="w-16 h-16 bg-blue-100 dark:bg-blue-900/50 text-blue-600 dark:text-blue-400 rounded-full flex items-center justify-center text-3xl mx-auto mb-4 shadow-inner">
                 <i class="fa-solid fa-lock"></i>
             </div>
@@ -561,23 +562,19 @@
                 document.getElementById('footerVendorName').textContent = CONFIG_APP.namaVendor || 'Studio Foto';
             }
 
+            // FORCED DEMO QUOTA (Batas Seleksi = 15)
+            appState.kuota = 15;
+            document.getElementById('quotaContainer').classList.remove('hidden'); 
+            document.getElementById('quotaContainer').classList.add('block');
+            document.getElementById('greetingQuotaInfo').classList.remove('hidden'); 
+            document.getElementById('greetingQuotaInfo').classList.add('flex');
+            document.getElementById('greetingQuotaLimit').textContent = appState.kuota;
+
             const urlParams = new URLSearchParams(window.location.search);
             if (urlParams.get('n')) {
                 appState.clientName = decodeURIComponent(urlParams.get('n')).replace(/-/g, ' ');
                 document.getElementById('displayClientName').textContent = appState.clientName;
                 document.getElementById('greetingSection').classList.remove('hidden');
-            }
-            if (urlParams.get('k')) {
-                try {
-                    let pK = urlParams.get('k'); const pad = pK.length % 4; if (pad > 0) pK += '='.repeat(4 - pad);
-                    const dK = parseInt(atob(pK));
-                    if (!isNaN(dK) && dK > 0) {
-                        appState.kuota = dK;
-                        document.getElementById('quotaContainer').classList.remove('hidden'); document.getElementById('quotaContainer').classList.add('block');
-                        document.getElementById('greetingQuotaInfo').classList.remove('hidden'); document.getElementById('greetingQuotaInfo').classList.add('flex');
-                        document.getElementById('greetingQuotaLimit').textContent = appState.kuota;
-                    }
-                } catch (e) {}
             }
 
             if (urlParams.get('i')) {
@@ -671,8 +668,8 @@
                     appState.folders = fetched.filter(f => f.mimeType === 'application/vnd.google-apps.folder');
                     let pFiles = fetched.filter(f => f.mimeType !== 'application/vnd.google-apps.folder' && f.thumbnailLink);
                     
-                    // LIMIT 15 FOTO UNTUK DEMO
-                    appState.photos = pFiles.slice(0, 15).map(f => ({ id: f.id, name: f.name, folderName: displayTitle, url: f.thumbnailLink?.replace('=s220', '=s500'), fullUrl: f.thumbnailLink?.replace('=s220', '=s1600') }));
+                    // LIMIT MAKSIMAL 30 FOTO UNTUK DEMO MODE (TAMPILAN)
+                    appState.photos = pFiles.slice(0, 30).map(f => ({ id: f.id, name: f.name, folderName: displayTitle, url: f.thumbnailLink?.replace('=s220', '=s500'), fullUrl: f.thumbnailLink?.replace('=s220', '=s1600') }));
                     appState.originalPhotos = [...appState.photos]; renderFolders(); document.getElementById('sortDropdown').value = 'random'; applySort('random');
                     
                     if (!overrideId) setTimeout(() => { showTutorial(false); }, 800); else if(hasSeenTutorial) setTimeout(triggerTooltipsAnimation, 500);
@@ -927,7 +924,7 @@
                 addLog(`----------------------------------------`); addLog(`PROSES SELESAI! Menyalin ${cR.count} file.`, "success");
                 if (nF.length > 0) { addLog(`Ada ${nF.length} file tidak ditemukan!`, "error"); addLog(`${nF.join(', ')}`, "warning"); }
             } catch (e) { addLog(`Error: ${e.message}`, "error"); } 
-            finally { b.disabled = false; b.innerHTML = `<i class="fa-solid fa-bolt mr-2"></i> Mulai Sortir (Maks 15 Foto)`; b.className = "w-full py-4 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl flex items-center justify-center gap-2 shadow-lg shadow-blue-600/30 mb-6 text-lg"; }
+            finally { b.disabled = false; b.innerHTML = `<i class="fa-solid fa-bolt mr-2"></i> Mulai Sortir & Copy File (Maks 15 Foto)`; b.className = "w-full py-4 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl flex items-center justify-center gap-2 shadow-lg shadow-blue-600/30 mb-6 text-lg"; }
         }
     </script>
 </body>
