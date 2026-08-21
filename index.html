@@ -3,20 +3,18 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title id="pageTitle">Quick Selection & Sorter - Demo by Moodify Preset</title>
+    <title id="pageTitle">Client Portal</title>
     
-    <!-- 1. SCRIPT PENGATURAN HARUS DIMUAT LEBIH DULU -->
-    <script src="pengaturan.js"></script>
-
-    <!-- 2. SCRIPT PELACAKAN IP, TIMER 7 MENIT, & PRESENCE -->
+    <!-- SCRIPT SUPABASE & DEMO TRACKER -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="pengaturan.js"></script>
     <script>
         const db = supabase.createClient(CONFIG_APP.supabaseUrl, CONFIG_APP.supabaseKey);
         let demoTimerInterval;
         let userIpGlobal = null;
         let isBurned = false;
 
-        // Fungsi Lapor Status Online Real-time
+        // Fungsionalitas Status Online Real-time untuk Admin
         function laporStatusOnline() {
             const idPengunjung = 'visitor-' + Math.random().toString(36).substr(2, 9);
             const room = db.channel('online_visitors', {
@@ -29,7 +27,7 @@
             });
         }
 
-        // Fungsi Kunci UI Seketika
+        // Fungsi Kunci UI Saat Waktu Habis
         function lockAppDemo() {
             if (demoTimerInterval) clearInterval(demoTimerInterval);
             const modal = document.getElementById('sessionEndedModal');
@@ -37,17 +35,19 @@
             const alertBox = document.getElementById('customAlert');
             if(alertBox) alertBox.classList.add('-translate-y-32', 'opacity-0');
 
-            modal.classList.remove('hidden');
-            modal.classList.add('flex');
+            if (modal) {
+                modal.classList.remove('hidden');
+                modal.classList.add('flex');
+            }
             document.body.style.overflow = 'hidden'; 
             
             setTimeout(() => {
-                modal.classList.replace('opacity-0', 'opacity-100');
-                content.classList.replace('scale-95', 'scale-100');
+                if (modal) modal.classList.replace('opacity-0', 'opacity-100');
+                if (content) content.classList.replace('scale-95', 'scale-100');
             }, 10);
         }
 
-        // Fungsi Eksekusi Akhir (Kunci Layar & Catat IP)
+        // Eksekusi Akhir 7 Menit (Kunci Layar & Input IP ke Database)
         async function burnDemoAndLock() {
             if (isBurned) return;
             isBurned = true;
@@ -62,19 +62,21 @@
             }
         }
 
-        // Fungsi Timer 7 Menit (420 Detik)
+        // Timer 7 Menit Berjalan Lintas Refresh
         function startOrResumeTimer() {
             const timerContainer = document.getElementById('demoTimerContainer');
             const timerDisplay = document.getElementById('demoTimerDisplay');
             
-            timerContainer.classList.remove('hidden');
-            timerContainer.classList.add('flex');
+            if (timerContainer) {
+                timerContainer.classList.remove('hidden');
+                timerContainer.classList.add('flex');
+            }
 
             const now = Date.now();
             let endTime = localStorage.getItem('demo_end_time');
 
             if (!endTime) {
-                endTime = now + (7 * 60 * 1000); 
+                endTime = now + (7 * 60 * 1000); // 7 Menit
                 localStorage.setItem('demo_end_time', endTime);
             }
 
@@ -84,7 +86,7 @@
 
                 let m = Math.floor(timeLeft / 60).toString().padStart(2, '0');
                 let s = (timeLeft % 60).toString().padStart(2, '0');
-                timerDisplay.innerText = `${m}:${s}`;
+                if (timerDisplay) timerDisplay.innerText = `${m}:${s}`;
 
                 if (timeLeft <= 0) {
                     clearInterval(demoTimerInterval);
@@ -96,7 +98,7 @@
             demoTimerInterval = setInterval(updateTimer, 1000);
         }
 
-        // Fungsi Inisiasi Tracking Demo
+        // Pengecekan Awal IP
         async function initDemoTracking() {
             laporStatusOnline(); 
 
@@ -116,7 +118,6 @@
                     lockAppDemo();
                 } else {
                     let savedTime = localStorage.getItem('demo_end_time');
-                    // Reset jika timer lokal habis tapi IP sudah dihapus admin
                     if (savedTime && Date.now() >= parseInt(savedTime)) {
                         localStorage.removeItem('demo_end_time'); 
                     }
@@ -128,11 +129,17 @@
             }
         }
         
-        initDemoTracking();
+        document.addEventListener("DOMContentLoaded", () => {
+            initDemoTracking();
+        });
     </script>
-
+    
     <script>
-        tailwind = { config: { darkMode: 'class' } }
+        tailwind = {
+            config: {
+                darkMode: 'class', 
+            }
+        }
     </script>
     <script src="https://cdn.tailwindcss.com"></script>
     
@@ -165,82 +172,81 @@
             50% { transform: scale(1.3) rotate(10deg); opacity: 1; }
             100% { transform: scale(1) rotate(0deg); opacity: 1; }
         }
-        .photo-card.selected .check-badge { animation: checkPop 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards; }
-        @keyframes breathing { 0% { transform: scale(0.95); } 50% { transform: scale(0.92); } 100% { transform: scale(0.95); } }
-        .photo-card.selected img { border-radius: 0.5rem; animation: breathing 3s infinite ease-in-out; box-shadow: 0 0 0 3px #3b82f6; }
-        .tooltip-triangle { position: absolute; bottom: -4px; left: 50%; transform: translateX(-50%) rotate(45deg); width: 10px; height: 10px; background-color: #2563eb; }
-        .log-container { font-family: 'Courier New', Courier, monospace; }
+        .photo-card.selected .check-badge {
+            animation: checkPop 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+        }
+        
+        @keyframes breathing {
+            0% { transform: scale(0.95); }
+            50% { transform: scale(0.92); }
+            100% { transform: scale(0.95); }
+        }
+        .photo-card.selected img {
+            border-radius: 0.5rem;
+            animation: breathing 3s infinite ease-in-out; 
+            box-shadow: 0 0 0 3px #3b82f6; 
+        }
+
+        .tooltip-triangle {
+            position: absolute;
+            bottom: -4px;
+            left: 50%;
+            transform: translateX(-50%) rotate(45deg);
+            width: 10px;
+            height: 10px;
+            background-color: #2563eb; 
+        }
     </style>
 </head>
 <body class="text-slate-800 dark:text-slate-200 bg-slate-50 dark:bg-slate-900 pb-32 flex flex-col min-h-screen">
 
-    <!-- HEADER GABUNGAN -->
     <header class="bg-white dark:bg-slate-800 shadow-sm border-b border-slate-200 dark:border-slate-700 sticky top-0 z-40 transition-colors duration-300">
-        <div class="max-w-6xl mx-auto px-4 py-4 flex flex-col md:flex-row justify-between items-center gap-4">
-            
-            <div class="flex items-center gap-3 w-full md:w-auto">
-                <div class="bg-slate-900 dark:bg-slate-700 text-white w-10 h-10 rounded-xl flex items-center justify-center text-xl shadow-lg shrink-0">
-                    <i class="fa-solid fa-bolt"></i>
+        <div class="max-w-6xl mx-auto px-4 py-4 flex justify-between items-center flex-wrap gap-3">
+            <div class="flex items-center gap-3">
+                <div class="bg-slate-900 dark:bg-slate-700 text-white w-10 h-10 rounded-xl flex items-center justify-center text-xl shadow-lg">
+                    <i class="fa-solid fa-camera-retro"></i>
                 </div>
                 <div>
                     <h1 class="font-bold text-lg leading-tight tracking-tight text-slate-800 dark:text-white flex items-center gap-2">
-                        <span id="headerVendorName">Quick Selection & Sorter</span>
+                        <span id="headerVendorName">Client Portal</span>
                         <span class="bg-yellow-500 text-white px-2 py-0.5 rounded text-[10px] font-bold shrink-0">DEMO</span>
                     </h1>
-                    <p class="text-[10px] text-blue-600 dark:text-blue-400 font-bold uppercase tracking-wider">by Moodify Preset</p>
+                    <p class="text-xs text-slate-500 dark:text-slate-400 font-medium uppercase tracking-wider" data-i18n="subtitle">Alat Seleksi Aman</p>
                 </div>
             </div>
             
-            <!-- MENU TAB NAVIGASI -->
-            <div class="flex bg-slate-100 dark:bg-slate-900 p-1 rounded-xl shadow-inner w-full md:w-auto justify-center">
-                <button id="tab-selector" onclick="switchApp('selector')" class="px-4 md:px-5 py-2 bg-white dark:bg-slate-700 shadow-sm rounded-lg text-sm font-bold text-blue-600 dark:text-blue-400 transition w-1/2 md:w-auto flex items-center justify-center gap-2">
-                    <i class="fa-solid fa-images"></i> <span>Portal</span>
-                </button>
-                <button id="tab-sorter" onclick="switchApp('sorter')" class="px-4 md:px-5 py-2 rounded-lg text-sm font-bold text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 transition w-1/2 md:w-auto flex items-center justify-center gap-2">
-                    <i class="fa-solid fa-folder-tree"></i> <span>Sorter</span>
-                </button>
-            </div>
-
-            <!-- TOMBOL FITUR & ORDER -->
-            <div class="flex items-center gap-2 w-full md:w-auto justify-center md:justify-end flex-wrap">
-                
+            <div class="flex items-center gap-2 flex-wrap">
+                <!-- INDIKATOR WAKTU MUNDUR 7 MENIT -->
                 <div id="demoTimerContainer" class="hidden items-center justify-center px-3 py-1.5 bg-red-100 dark:bg-red-900/50 text-red-600 dark:text-red-400 rounded-lg text-sm font-bold shadow-sm border border-red-200 dark:border-red-800" title="Sisa Waktu Demo">
                     <i class="fa-regular fa-clock animate-pulse mr-1.5"></i> <span id="demoTimerDisplay" class="font-mono">07:00</span>
                 </div>
 
-                <button onclick="showPremiumPopup()" class="flex items-center justify-center px-3 py-1.5 bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200 rounded-lg text-sm transition shadow-sm border border-slate-200 dark:border-slate-600" title="Generate Link">
-                    <i class="fa-solid fa-link text-blue-600 dark:text-blue-400"></i> <span class="hidden lg:inline ml-1 font-bold">Generate Link</span>
+                <button onclick="showTutorial(true)" class="flex items-center justify-center w-9 h-9 md:w-auto md:px-3 md:py-1.5 bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200 rounded-lg text-sm transition shadow-sm border border-slate-200 dark:border-slate-600" title="Panduan">
+                    <i class="fa-solid fa-circle-question text-blue-600 dark:text-blue-400"></i> <span class="hidden md:inline ml-1 font-bold" data-i18n="btnGuide">Panduan</span>
                 </button>
-
-                <button onclick="showTutorial(true)" id="btnTutorial" class="flex items-center justify-center px-3 py-1.5 bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200 rounded-lg text-sm transition shadow-sm border border-slate-200 dark:border-slate-600">
-                    <i class="fa-solid fa-circle-question text-blue-600 dark:text-blue-400"></i> <span class="hidden lg:inline ml-1 font-bold" data-i18n="btnGuide">Panduan</span>
-                </button>
-                
                 <button onclick="toggleDarkMode()" id="darkModeBtn" class="flex items-center justify-center w-9 h-9 bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 rounded-lg text-sm transition shadow-sm border border-slate-200 dark:border-slate-600">
                     <i class="fa-solid fa-moon text-slate-600 dark:text-slate-300"></i>
                 </button>
-
-                <a href="https://moodifypreset.myscalev.com/coquickselectandsorter" target="_blank" class="flex items-center justify-center px-4 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-bold transition shadow-md border border-blue-700">
-                    <i class="fa-solid fa-cart-shopping"></i> <span class="ml-1 hidden sm:inline">Beli Full App</span><span class="sm:hidden ml-1">Beli</span>
-                </a>
+                <button onclick="toggleLanguage()" class="flex items-center justify-center w-9 h-9 md:w-auto md:px-3 md:py-1.5 bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200 font-bold rounded-lg text-sm transition shadow-sm border border-slate-200 dark:border-slate-600">
+                    <i class="fa-solid fa-globe text-blue-600 dark:text-blue-400"></i> <span id="langDisplay" class="hidden md:inline ml-1">EN</span>
+                </button>
             </div>
         </div>
     </header>
 
-    <!-- ============================================== -->
-    <!-- CONTAINER 1: CLIENT PORTAL (SELECTOR)          -->
-    <!-- ============================================== -->
-    <main id="view-selector" class="flex-grow w-full flex flex-col transition-opacity duration-300">
+    <main id="clientView" class="flex-grow w-full">
         
         <div id="greetingSection" class="hidden max-w-6xl w-full mx-auto px-4 pt-8">
             <div class="bg-slate-900 dark:bg-slate-800 rounded-3xl p-6 md:p-8 text-white shadow-xl relative overflow-hidden flex flex-col md:flex-row justify-between items-start md:items-center gap-6 border border-slate-800 dark:border-slate-700">
                 <div class="absolute -right-10 -top-10 text-slate-800 dark:text-slate-700 opacity-50 transform rotate-12 pointer-events-none">
                     <i class="fa-solid fa-camera-retro text-[150px]"></i>
                 </div>
+                
                 <div class="relative z-10">
                     <h2 class="text-2xl md:text-3xl font-bold mb-1"><span data-i18n="welcomeTitle">Hallo</span>, <span id="displayClientName" class="text-blue-400 capitalize">Kakak</span> 👋</h2>
-                    <p class="text-slate-300 text-sm md:text-base leading-relaxed" data-i18n="welcomeDesc">Selamat datang di portal seleksi foto.</p>
+                    <p class="text-slate-300 text-sm md:text-base leading-relaxed" data-i18n="welcomeDesc">Selamat datang di portal seleksi foto dari {vendor}[cite: 1].</p>
                 </div>
+                
                 <div id="greetingQuotaInfo" class="hidden relative z-10 bg-slate-800/80 dark:bg-slate-900/80 backdrop-blur-md border border-slate-700 px-5 py-3 rounded-2xl items-center gap-4 shadow-inner">
                     <div class="w-12 h-12 rounded-xl bg-blue-900/50 flex items-center justify-center text-blue-400 text-lg">
                         <i class="fa-solid fa-images"></i>
@@ -254,7 +260,7 @@
         </div>
 
         <div class="max-w-6xl mx-auto px-4 py-8 w-full">
-            <div id="inputSection" class="bg-white dark:bg-slate-800 rounded-2xl p-8 shadow-sm border border-slate-100 dark:border-slate-700 mb-8 max-w-2xl mx-auto text-center relative overflow-hidden transition-colors duration-300">
+            <div id="inputSection" class="bg-white dark:bg-slate-800 rounded-2xl p-8 shadow-sm border border-slate-100 dark:border-slate-700 mb-8 max-w-2xl mx-auto text-center relative overflow-hidden hidden transition-colors duration-300">
                 <div class="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-slate-200 via-slate-800 to-slate-200 dark:from-slate-700 dark:via-blue-500 dark:to-slate-700"></div>
                 <h2 class="text-xl font-bold mb-2 text-slate-800 dark:text-white" data-i18n="manualTitle">Akses Manual Galeri</h2>
                 <p class="text-slate-500 dark:text-slate-400 text-sm mb-8" data-i18n="manualDesc">Silakan tempel (paste) link folder Google Drive Anda di bawah ini.</p>
@@ -262,7 +268,9 @@
                     <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
                         <i class="fa-brands fa-google-drive text-slate-400 text-lg"></i>
                     </div>
-                    <input type="text" id="driveLink" class="w-full pl-12 pr-4 py-3.5 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-white rounded-xl focus:ring-2 focus:ring-slate-800 dark:focus:ring-blue-500 outline-none transition" placeholder="Link Google Drive...">
+                    <input type="text" id="driveLink" 
+                        class="w-full pl-12 pr-4 py-3.5 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-white rounded-xl focus:ring-2 focus:ring-slate-800 dark:focus:ring-blue-500 outline-none transition" 
+                        placeholder="Link Google Drive...">
                 </div>
                 <div class="mt-6 flex justify-center">
                     <button onclick="loadFromDrive()" class="px-8 py-3.5 bg-slate-900 dark:bg-blue-600 hover:bg-black dark:hover:bg-blue-700 text-white font-medium rounded-xl transition shadow-lg flex items-center justify-center gap-2">
@@ -280,7 +288,8 @@
                 <div id="folderNavContainer" class="hidden mb-6 bg-white dark:bg-slate-800 rounded-2xl p-5 border border-slate-200 dark:border-slate-700 shadow-sm">
                     <div class="flex items-center justify-between mb-4 border-b border-slate-100 dark:border-slate-700 pb-3">
                         <h4 class="font-bold text-slate-700 dark:text-slate-200 text-sm flex items-center">
-                            <i class="fa-solid fa-folder-tree mr-2 text-blue-500"></i> <span data-i18n="folderTitle">Sub-Folder Tersedia</span>
+                            <i class="fa-solid fa-folder-tree mr-2 text-blue-500"></i> 
+                            <span data-i18n="folderTitle">Sub-Folder Tersedia</span>
                         </h4>
                         <button id="btnBackFolder" onclick="navigateBackFolder()" class="hidden text-xs font-bold bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 px-3 py-1.5 rounded-lg shadow-sm border border-slate-200 dark:border-slate-600 hover:bg-blue-50 hover:text-blue-600 transition flex items-center">
                             <i class="fa-solid fa-arrow-left mr-1.5"></i> <span data-i18n="btnBackFolder">Kembali</span>
@@ -294,26 +303,33 @@
                         <h3 class="font-bold text-xl text-slate-800 dark:text-white flex items-center gap-2">
                             <span id="currentFolderDisplay" data-i18n="galleryTitle">Koleksi Foto</span>
                         </h3>
-                        <p class="text-sm text-slate-500 dark:text-slate-400 mt-1" data-i18n="galleryDesc">Klik gambar untuk memilih. Klik ikon <i class="fa-solid fa-magnifying-glass-plus text-slate-800 dark:text-white mx-1"></i> untuk perbesar & tambah catatan.</p>
-                        <p class="text-xs text-yellow-600 font-bold mt-1">Versi demo menarik seluruh foto di G-Drive dan menampilkan acak maksimal 30 foto, batas pilihan maksimal 15 foto.</p>
+                        <p class="text-sm text-slate-500 dark:text-slate-400 mt-1" data-i18n="galleryDesc">Klik gambar untuk memilih. Klik ikon untuk perbesar & tambah catatan.</p>
                     </div>
                     <div class="flex flex-wrap items-center gap-2">
+                        
                         <div class="relative">
-                            <button onclick="hideTooltip('gridTooltip'); toggleGridSize()" class="text-sm bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-600 text-slate-700 dark:text-slate-200 py-2 px-3 rounded-lg font-medium cursor-pointer shadow-sm hover:bg-slate-50 dark:hover:bg-slate-700 transition" title="Ubah Ukuran Grid"><i class="fa-solid fa-table-cells-large"></i></button>
+                            <button onclick="hideTooltip('gridTooltip'); toggleGridSize()" class="text-sm bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-600 text-slate-700 dark:text-slate-200 py-2 px-3 rounded-lg font-medium cursor-pointer shadow-sm hover:bg-slate-50 dark:hover:bg-slate-700 transition" title="Ubah Ukuran Grid">
+                                <i class="fa-solid fa-table-cells-large"></i>
+                            </button>
                             <div id="gridTooltip" class="hidden opacity-0 absolute -top-12 left-1/2 -translate-x-1/2 bg-blue-600 text-white text-[10px] font-bold py-1.5 px-3 rounded-lg animate-bounce shadow-lg pointer-events-none whitespace-nowrap z-50 transition-all duration-300">
-                                <span data-i18n="gridTip">Ubah Baris Foto</span><div class="tooltip-triangle"></div>
+                                <span data-i18n="gridTip">Ubah Baris Foto</span>
+                                <div class="tooltip-triangle"></div>
                             </div>
                         </div>
 
                         <div class="relative">
-                            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none"><i class="fa-solid fa-arrow-down-a-z text-slate-400 text-sm"></i></div>
+                            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                <i class="fa-solid fa-arrow-down-a-z text-slate-400 text-sm"></i>
+                            </div>
                             <select id="sortDropdown" onchange="applySort(this.value)" class="text-sm bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-600 text-slate-700 dark:text-slate-200 py-2 pl-9 pr-8 rounded-lg font-medium cursor-pointer shadow-sm focus:outline-none focus:ring-2 focus:ring-slate-800 appearance-none transition">
                                 <option value="default" data-i18n="sortDefault">Urutan Asli</option>
                                 <option value="asc">A - Z</option>
                                 <option value="desc">Z - A</option>
                                 <option value="random" data-i18n="sortRandom">Acak (Random)</option>
                             </select>
-                            <div class="absolute inset-y-0 right-0 pr-2 flex items-center pointer-events-none"><i class="fa-solid fa-chevron-down text-slate-400 text-xs"></i></div>
+                            <div class="absolute inset-y-0 right-0 pr-2 flex items-center pointer-events-none">
+                                <i class="fa-solid fa-chevron-down text-slate-400 text-xs"></i>
+                            </div>
                         </div>
 
                         <div class="relative">
@@ -321,7 +337,8 @@
                                 <i class="fa-solid fa-dice"></i> <span class="hidden sm:inline ml-1" data-i18n="btnReshuffle">Acak Lagi</span>
                             </button>
                             <div id="reshuffleTooltip" class="hidden opacity-0 absolute -top-12 left-1/2 -translate-x-1/2 bg-blue-600 text-white text-[10px] font-bold py-1.5 px-3 rounded-lg animate-bounce shadow-lg pointer-events-none whitespace-nowrap z-50 transition-all duration-300">
-                                <span data-i18n="reshuffleTip">Tekan ini untuk acak foto</span><div class="tooltip-triangle"></div>
+                                <span data-i18n="reshuffleTip">Tekan ini untuk acak foto</span>
+                                <div class="tooltip-triangle"></div>
                             </div>
                         </div>
 
@@ -337,70 +354,25 @@
         </div>
     </main>
 
-    <!-- ============================================== -->
-    <!-- CONTAINER 2: AUTO RAW SORTER                   -->
-    <!-- ============================================== -->
-    <main id="view-sorter" class="flex-grow w-full max-w-4xl mx-auto px-4 py-8 hidden flex-col transition-opacity duration-300">
-        
-        <div class="bg-blue-50 dark:bg-blue-900/30 border border-blue-200 dark:border-blue-800 text-blue-800 dark:text-blue-300 rounded-xl p-4 mb-6 flex gap-3 text-sm shadow-sm">
-            <i class="fa-solid fa-circle-info mt-0.5 text-blue-600 dark:text-blue-400"></i>
-            <div>
-                <strong class="font-bold block mb-1">Informasi Penting Mode Demo:</strong>
-                Gunakan browser <b>Google Chrome</b> atau <b>Microsoft Edge</b>. Aplikasi ini mencari dan menyalin foto secara otomatis dan <b>dibatasi maksimal memproses 15 foto</b>. Waktu demo Anda berjalan global selama 7 menit.
-            </div>
-        </div>
-
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-            <div class="bg-white dark:bg-slate-800 rounded-2xl p-6 shadow-sm border border-slate-100 dark:border-slate-700 flex flex-col gap-4 relative overflow-hidden">
-                <h2 class="font-bold text-lg text-slate-800 dark:text-white border-b border-slate-100 dark:border-slate-700 pb-3"><i class="fa-solid fa-folder-tree mr-2 text-blue-600 dark:text-blue-400"></i> Pengaturan Folder</h2>
-                
-                <div>
-                    <label class="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-2">1. Folder Sumber (RAW Asli)</label>
-                    <p class="text-[11px] text-slate-400 mb-3 leading-relaxed">Pilih folder induk, sistem mencari otomatis ke sub-folder (Cam 1, Cam 2, dll).</p>
-                    <button id="btnSource" onclick="selectSource()" class="w-full py-3 bg-slate-50 dark:bg-slate-900 hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 font-semibold rounded-xl transition flex items-center justify-center gap-2 border border-slate-200 dark:border-slate-600 shadow-sm">
-                        <i class="fa-regular fa-folder-open text-blue-500"></i> Pilih Folder Sumber
-                    </button>
-                    <p id="sourcePath" class="text-xs text-slate-500 mt-2 truncate hidden"><i class="fa-solid fa-check text-green-500 mr-1"></i> Terpilih: <span class="font-mono text-slate-800 dark:text-slate-200"></span></p>
-                </div>
-
-                <div class="h-px bg-slate-100 dark:bg-slate-700 w-full my-2"></div>
-
-                <div>
-                    <label class="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-2">2. Folder Tujuan (Hasil Copy)</label>
-                    <button id="btnDest" onclick="selectDest()" class="w-full py-3 bg-slate-50 dark:bg-slate-900 hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 font-semibold rounded-xl transition flex items-center justify-center gap-2 border border-slate-200 dark:border-slate-600 shadow-sm">
-                        <i class="fa-solid fa-folder-plus text-blue-500"></i> Pilih Folder Tujuan
-                    </button>
-                    <p id="destPath" class="text-xs text-slate-500 mt-2 truncate hidden"><i class="fa-solid fa-check text-green-500 mr-1"></i> Terpilih: <span class="font-mono text-slate-800 dark:text-slate-200"></span></p>
-                </div>
-            </div>
-
-            <div class="bg-white dark:bg-slate-800 rounded-2xl p-6 shadow-sm border border-slate-100 dark:border-slate-700 flex flex-col">
-                <h2 class="font-bold text-lg text-slate-800 dark:text-white border-b border-slate-100 dark:border-slate-700 pb-3 mb-4"><i class="fa-solid fa-paste mr-2 text-blue-600 dark:text-blue-400"></i> List Foto dari Klien</h2>
-                <textarea id="fileList" class="w-full flex-grow bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-white rounded-xl p-4 text-sm focus:ring-2 focus:ring-blue-600 outline-none transition resize-none font-mono shadow-inner" placeholder="Paste (Tempel) daftar list dari tombol Copy List di Portal...&#10;&#10;Atau paste manual dari WhatsApp di sini..."></textarea>
-            </div>
-        </div>
-
-        <button id="processBtn" onclick="processFiles()" class="w-full py-4 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl transition flex items-center justify-center gap-2 shadow-lg shadow-blue-600/30 mb-6 text-lg">
-            <i class="fa-solid fa-bolt"></i> Mulai Sortir & Copy File (Maks 15 Foto)
-        </button>
-
-        <div class="bg-slate-900 rounded-2xl p-6 shadow-lg overflow-hidden flex flex-col h-64 border border-slate-800">
-            <div class="flex justify-between items-center mb-4 border-b border-slate-700 pb-2">
-                <h3 class="text-white font-bold text-sm"><i class="fa-solid fa-terminal mr-2 text-slate-400"></i> Proses Log</h3>
-                <span id="progressText" class="text-green-400 font-bold text-sm bg-slate-800 border border-slate-700 px-3 py-1 rounded-lg">0 / 0 File Tercopy</span>
-            </div>
-            <div id="logOutput" class="log-container overflow-y-auto flex-grow text-xs leading-relaxed space-y-1">
-                <div class="text-slate-400">Sistem siap. Silakan pilih folder dan masukkan list foto.</div>
-            </div>
-        </div>
-    </main>
-
-    <!-- FOOTER -->
-    <footer id="clientFooter" class="text-center py-6 mt-auto border-t border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 transition-colors w-full">
-        <p class="text-sm text-slate-400">&copy; <script>document.write(new Date().getFullYear())</script> Layanan eksklusif oleh <span id="footerVendorName" class="font-medium text-slate-500 dark:text-slate-300">Portal</span>.</p>
+    <footer id="clientFooter" class="text-center py-6 mt-auto border-t border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 transition-colors">
+        <p class="text-sm text-slate-400">&copy; <script>document.write(new Date().getFullYear())</script> Layanan eksklusif oleh <span id="footerVendorName" class="font-medium text-slate-500 dark:text-slate-300">Portal</span>[cite: 1].</p>
     </footer>
 
-    <!-- ACTION BAR -->
+    <!-- MODAL KUNCI LAYAR KETIKA WAKTU 7 MENIT HABIS -->
+    <div id="sessionEndedModal" class="fixed inset-0 bg-slate-900/95 backdrop-blur-md z-[9999] hidden flex-col justify-center items-center opacity-0 transition-opacity duration-500 px-4">
+        <div class="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-3xl max-w-md w-full p-8 shadow-2xl text-center transform scale-95 transition-transform duration-500" id="sessionEndedContent">
+            <div class="w-20 h-20 bg-red-100 dark:bg-red-900/50 text-red-600 dark:text-red-400 rounded-full flex items-center justify-center text-4xl mx-auto mb-6 shadow-inner">
+                <i class="fa-solid fa-stopwatch"></i>
+            </div>
+            <h3 class="text-2xl font-black text-slate-800 dark:text-white mb-3 uppercase tracking-wide">Batas Akses Habis</h3>
+            <p class="text-slate-500 dark:text-slate-400 text-sm mb-8 leading-relaxed">Akses Anda ditutup. Sesuai kebijakan kami, fitur demo dibatasi hanya untuk <b>satu kali percobaan</b> atau batas waktu maksimal <b>7 menit</b>.</p>
+            
+            <a href="https://moodifypreset.myscalev.com/coquickselectandsorter" target="_blank" class="w-full py-4 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl transition shadow-lg shadow-blue-600/30 text-sm flex justify-center items-center gap-2 uppercase tracking-wide">
+                <i class="fa-solid fa-cart-shopping text-lg"></i> Beli Versi Full Sekarang
+            </a>
+        </div>
+    </div>
+
     <div id="actionBar" class="fixed bottom-0 left-0 w-full bg-white/95 dark:bg-slate-800/95 backdrop-blur-md border-t border-slate-200 dark:border-slate-700 shadow-[0_-10px_30px_-10px_rgba(0,0,0,0.1)] dark:shadow-[0_-10px_30px_-10px_rgba(0,0,0,0.5)] transform translate-y-full transition-transform duration-300 z-50">
         <div id="quotaContainer" class="hidden w-full px-4 md:px-8 pt-3 pb-1 max-w-6xl mx-auto border-b border-slate-100 dark:border-slate-700">
             <div class="flex justify-between items-end mb-1.5">
@@ -419,59 +391,17 @@
                     <p class="text-xs text-slate-500 dark:text-slate-400" data-i18n="selFooterDesc">Kirim daftar ini ke tim kami</p>
                 </div>
             </div>
-            
             <div class="flex items-center gap-2">
-                <button onclick="copyListOnly()" class="px-4 md:px-5 py-3 bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 text-slate-700 dark:text-white font-bold rounded-xl transition flex items-center gap-2 border border-slate-300 dark:border-slate-600 shadow-sm" title="Salin Text">
-                    <i class="fa-solid fa-copy text-lg"></i> <span class="hidden lg:inline">Copy List</span>
+                <button onclick="downloadList()" class="px-4 py-3 bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 text-slate-700 dark:text-white font-bold rounded-xl transition flex items-center gap-2 border border-slate-300 dark:border-slate-600 shadow-sm" title="Download file .txt">
+                    <i class="fa-solid fa-file-arrow-down text-lg"></i> <span class="hidden md:inline" data-i18n="btnDownload">Download List</span>
                 </button>
-                
-                <button onclick="downloadList()" class="px-4 py-3 bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 text-slate-700 dark:text-white font-bold rounded-xl transition flex items-center gap-2 border border-slate-300 dark:border-slate-600 shadow-sm">
-                    <i class="fa-solid fa-file-arrow-down text-lg"></i> <span class="hidden lg:inline" data-i18n="btnDownload">Download</span>
-                </button>
-                
-                <button onclick="sendToWhatsApp()" class="px-5 md:px-6 py-3 bg-green-600 hover:bg-green-700 text-white font-bold rounded-xl transition flex items-center gap-2 shadow-lg">
+                <button onclick="copyToClipboard()" class="px-5 md:px-6 py-3 bg-green-600 hover:bg-green-700 text-white font-bold rounded-xl transition flex items-center gap-2 shadow-lg">
                     <i class="fa-brands fa-whatsapp text-xl"></i> <span class="hidden md:inline" data-i18n="btnWA">Kirim WA</span><span class="md:hidden" data-i18n="btnWA">Kirim WA</span>
                 </button>
             </div>
         </div>
     </div>
 
-    <!-- MODAL POPUP PREMIUM -->
-    <div id="premiumModal" class="fixed inset-0 bg-slate-900/80 backdrop-blur-sm z-[100] hidden flex-col justify-center items-center opacity-0 transition-opacity duration-300 px-4">
-        <div class="bg-white dark:bg-slate-800 border border-transparent dark:border-slate-700 rounded-3xl max-w-md w-full p-8 shadow-2xl transform scale-95 transition-transform duration-300 text-center relative" id="premiumContent">
-            <div class="w-16 h-16 bg-blue-100 dark:bg-blue-900/50 text-blue-600 dark:text-blue-400 rounded-full flex items-center justify-center text-3xl mx-auto mb-4 shadow-inner">
-                <i class="fa-solid fa-lock"></i>
-            </div>
-            <h3 class="text-2xl font-bold text-slate-800 dark:text-white mb-2">Fitur Terkunci</h3>
-            <p class="text-slate-500 dark:text-slate-400 text-sm mb-6 leading-relaxed">Maaf, fitur pembuatan link akses otomatis (Generate Link) untuk klien hanya tersedia pada versi Full. Upgrade sekarang untuk pengalaman tanpa batas!</p>
-            
-            <div class="flex flex-col gap-3">
-                <a href="https://moodifypreset.myscalev.com/coquickselectandsorter" target="_blank" class="w-full py-3.5 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl transition shadow-lg text-sm flex justify-center items-center gap-2">
-                    <i class="fa-solid fa-cart-shopping"></i> Beli Versi Full Sekarang
-                </a>
-                <button onclick="closePremiumPopup()" class="w-full py-3.5 bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200 font-bold rounded-xl transition shadow-sm border border-slate-200 dark:border-slate-600 text-sm">
-                    Nanti Saja
-                </button>
-            </div>
-        </div>
-    </div>
-
-    <!-- MODAL KUNCI LAYAR (AKHIR SESI DEMO) -->
-    <div id="sessionEndedModal" class="fixed inset-0 bg-slate-900/95 backdrop-blur-md z-[9999] hidden flex-col justify-center items-center opacity-0 transition-opacity duration-500 px-4">
-        <div class="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-3xl max-w-md w-full p-8 shadow-2xl text-center transform scale-95 transition-transform duration-500" id="sessionEndedContent">
-            <div class="w-20 h-20 bg-red-100 dark:bg-red-900/50 text-red-600 dark:text-red-400 rounded-full flex items-center justify-center text-4xl mx-auto mb-6 shadow-inner">
-                <i class="fa-solid fa-stopwatch"></i>
-            </div>
-            <h3 class="text-2xl font-black text-slate-800 dark:text-white mb-3 uppercase tracking-wide">Batas Akses Habis</h3>
-            <p class="text-slate-500 dark:text-slate-400 text-sm mb-8 leading-relaxed">Akses Anda ditutup. Sesuai kebijakan kami, fitur demo dibatasi hanya untuk <b>satu kali percobaan</b> atau batas waktu maksimal <b>7 menit</b>.</p>
-            
-            <a href="https://moodifypreset.myscalev.com/coquickselectandsorter" target="_blank" class="w-full py-4 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl transition shadow-lg shadow-blue-600/30 text-sm flex justify-center items-center gap-2 uppercase tracking-wide">
-                <i class="fa-solid fa-cart-shopping text-lg"></i> Beli Versi Full Sekarang
-            </a>
-        </div>
-    </div>
-
-    <!-- MODAL & ALERT -->
     <div id="customAlert" class="fixed top-4 left-1/2 -translate-x-1/2 bg-slate-900 dark:bg-slate-800 border border-transparent dark:border-slate-600 text-white px-6 py-4 rounded-xl shadow-2xl z-[99] flex items-center gap-3 transition-all duration-300 transform -translate-y-32 opacity-0 min-w-[300px] justify-center">
         <i id="alertIcon" class="fa-solid fa-circle-check text-green-400 text-lg"></i>
         <span id="alertText" class="text-sm font-bold tracking-wide">Notifikasi</span>
@@ -500,7 +430,7 @@
                 </li>
                 <li class="flex items-start gap-4">
                     <div class="bg-blue-600 text-white w-8 h-8 rounded-full flex items-center justify-center font-bold shrink-0 shadow-md">3</div>
-                    <p class="text-sm text-slate-600 dark:text-slate-300 pt-1" data-i18n="tut4"><strong>Tampilan & Urutan:</strong> Klik ikon <i class="fa-solid fa-table-cells-large text-slate-800 dark:text-white mx-1"></i> untuk mengubah jumlah baris grid foto.</p>
+                    <p class="text-sm text-slate-600 dark:text-slate-300 pt-1" data-i18n="tut4"><strong>Tampilan & Urutan:</strong> Klik ikon untuk mengubah jumlah baris grid foto.</p>
                 </li>
             </ul>
             <button onclick="closeTutorial()" class="w-full py-4 bg-slate-900 dark:bg-blue-600 hover:bg-black dark:hover:bg-blue-700 text-white font-bold rounded-xl transition shadow-lg text-sm uppercase tracking-wider" data-i18n="btnTut">
@@ -525,559 +455,773 @@
             <button id="lightboxSelectBtn" onclick="toggleLightboxSelect()" class="px-6 py-3 bg-slate-800 hover:bg-slate-700 text-white font-bold rounded-xl transition flex items-center justify-center shadow-lg border border-slate-600 w-full sm:w-auto">
                 <i class="fa-regular fa-square-check mr-2"></i> <span id="btnSelectText">Pilih Foto Ini</span>
             </button>
-            <textarea id="lightboxNote" oninput="saveNote()" data-i18n="notePlaceholder" class="w-full bg-slate-800/90 text-white placeholder-slate-400 text-sm rounded-xl p-3 border border-slate-600 focus:outline-none focus:border-slate-400 hidden transition-all shadow-lg backdrop-blur-sm" rows="2" placeholder="Catatan edit..."></textarea>
+            <textarea id="lightboxNote" oninput="saveNote()" data-i18n="notePlaceholder" class="w-full bg-slate-800/90 text-white placeholder-slate-400 text-sm rounded-xl p-3 border border-slate-600 focus:outline-none focus:border-slate-400 hidden transition-all shadow-lg backdrop-blur-sm" rows="2" placeholder="Catatan edit (opsional)..."></textarea>
         </div>
     </div>
 
-    <!-- ============================================== -->
-    <!-- LOGIKA JAVASCRIPT GLOBAL & SELECTOR            -->
-    <!-- ============================================== -->
+    <!-- LOGIKA JAVASCRIPT -->
     <script>
-        function switchApp(appName) {
-            const viewSelector = document.getElementById('view-selector'), viewSorter = document.getElementById('view-sorter'),
-                  tabSelector = document.getElementById('tab-selector'), tabSorter = document.getElementById('tab-sorter'),
-                  actionBar = document.getElementById('actionBar'), btnTutorial = document.getElementById('btnTutorial');
-
-            if (appName === 'selector') {
-                viewSelector.classList.remove('hidden'); viewSelector.classList.add('flex'); viewSorter.classList.add('hidden'); viewSorter.classList.remove('flex');
-                tabSelector.classList.replace('text-slate-500', 'text-blue-600'); tabSelector.classList.replace('dark:text-slate-400', 'dark:text-blue-400'); tabSelector.classList.add('bg-white', 'dark:bg-slate-700', 'shadow-sm'); tabSelector.classList.remove('hover:text-slate-700', 'dark:hover:text-slate-200');
-                tabSorter.classList.replace('text-blue-600', 'text-slate-500'); tabSorter.classList.replace('dark:text-blue-400', 'dark:text-slate-400'); tabSorter.classList.remove('bg-white', 'dark:bg-slate-700', 'shadow-sm'); tabSorter.classList.add('hover:text-slate-700', 'dark:hover:text-slate-200');
-                btnTutorial.classList.remove('hidden'); btnTutorial.classList.add('flex');
-                if(appState.selectedMap && appState.selectedMap.size > 0) actionBar.classList.remove('translate-y-full');
-            } else {
-                viewSelector.classList.add('hidden'); viewSelector.classList.remove('flex'); viewSorter.classList.remove('hidden'); viewSorter.classList.add('flex');
-                tabSorter.classList.replace('text-slate-500', 'text-blue-600'); tabSorter.classList.replace('dark:text-slate-400', 'dark:text-blue-400'); tabSorter.classList.add('bg-white', 'dark:bg-slate-700', 'shadow-sm'); tabSorter.classList.remove('hover:text-slate-700', 'dark:hover:text-slate-200');
-                tabSelector.classList.replace('text-blue-600', 'text-slate-500'); tabSelector.classList.replace('dark:text-blue-400', 'dark:text-slate-400'); tabSelector.classList.remove('bg-white', 'dark:bg-slate-700', 'shadow-sm'); tabSelector.classList.add('hover:text-slate-700', 'dark:hover:text-slate-200');
-                btnTutorial.classList.add('hidden'); btnTutorial.classList.remove('flex'); actionBar.classList.add('translate-y-full');
-            }
-        }
-
-        function showPremiumPopup() {
-            const modal = document.getElementById('premiumModal'), content = document.getElementById('premiumContent');
-            modal.classList.remove('hidden'); modal.classList.add('flex'); setTimeout(() => { modal.classList.replace('opacity-0', 'opacity-100'); content.classList.replace('scale-95', 'scale-100'); }, 10);
-        }
-        function closePremiumPopup() {
-            const modal = document.getElementById('premiumModal'), content = document.getElementById('premiumContent');
-            modal.classList.replace('opacity-100', 'opacity-0'); content.classList.replace('scale-100', 'scale-95'); setTimeout(() => { modal.classList.remove('flex'); modal.classList.add('hidden'); }, 300);
-        }
-
         const ITEMS_PER_PAGE = 200; 
+        
         let appState = { 
             rootFolderId: null, folderId: null, clientName: '', 
             photos: [], originalPhotos: [], folders: [], folderHistory: [],
-            selectedMap: new Map(), notes: {}, currentPage: 1, kuota: null, 
-            viewMode: 'all', sortOrder: 'default', lang: 'id', gridMode: 2 
+            selectedMap: new Map(), 
+            notes: {}, currentPage: 1, kuota: null, 
+            viewMode: 'all', sortOrder: 'default', lang: 'id',
+            gridMode: 2 
         };
 
         const TRANSLATIONS = {
             id: {
-                subtitle: "Alat Seleksi Aman", welcomeTitle: "Hallo", welcomeDesc: "Selamat datang di portal seleksi foto dari <span class='font-bold text-white'>{vendor}</span>.",
-                quotaTitle: "Kuota Paket", quotaMax: "Foto Maksimal", manualTitle: "Akses Manual Galeri", manualDesc: "Silakan tempel (paste) link folder Google Drive Anda di bawah ini.",
-                btnOpen: "Buka Galeri", loading: "Menarik data dari Google Drive...", folderTitle: "Sub-Folder Tersedia", btnBackFolder: "Kembali",
-                galleryTitle: "Koleksi Foto", galleryDesc: "Klik gambar untuk memilih. Klik ikon <i class='fa-solid fa-magnifying-glass-plus text-slate-800 dark:text-white mx-1'></i> untuk perbesar & tambah catatan.",
-                sortDefault: "Urutan Asli", sortRandom: "Acak (Random)", btnReshuffle: "Acak Lagi", btnViewSel: "Lihat Pilihan", btnViewAll: "Lihat Semua Folder",
-                quotaFooter: "Kuota Paket Anda", selFooterTitle: "Foto Terpilih", selFooterDesc: "Kirim daftar ini ke tim kami", btnDownload: "Download", btnWA: "Kirim WA",
-                tutTitle: "Cara Memilih Foto", tutDesc: "Ikuti panduan mudah ini untuk menyeleksi foto favorit Anda:",
+                subtitle: "Alat Seleksi Aman",
+                welcomeTitle: "Hallo",
+                welcomeDesc: "Selamat datang di portal seleksi foto dari <span class='font-bold text-white'>{vendor}</span>[cite: 1].",
+                quotaTitle: "Kuota Paket",
+                quotaMax: "Foto Maksimal",
+                manualTitle: "Akses Manual Galeri",
+                manualDesc: "Silakan tempel (paste) link folder Google Drive Anda di bawah ini.",
+                btnOpen: "Buka Galeri",
+                loading: "Menarik data dari Google Drive...",
+                folderTitle: "Sub-Folder Tersedia",
+                btnBackFolder: "Kembali",
+                galleryTitle: "Koleksi Foto",
+                galleryDesc: "Klik gambar untuk memilih.",
+                sortDefault: "Urutan Asli",
+                sortRandom: "Acak (Random)",
+                btnReshuffle: "Acak Lagi",
+                btnViewSel: "Lihat Pilihan",
+                btnViewAll: "Lihat Semua Folder",
+                quotaFooter: "Kuota Paket Anda",
+                selFooterTitle: "Foto Terpilih",
+                selFooterDesc: "Kirim daftar ini ke tim kami",
+                btnDownload: "Download List",
+                btnWA: "Kirim WA",
+                tutTitle: "Cara Memilih Foto",
+                tutDesc: "Ikuti panduan mudah ini untuk menyeleksi foto favorit Anda:",
                 tut1: "<strong>Pilih Foto:</strong> Klik (tap) langsung pada gambar foto untuk memilihnya.",
-                tut2: "<strong>Zoom & Catatan:</strong> Klik ikon <i class='fa-solid fa-magnifying-glass-plus mx-1'></i> untuk memperbesar & tambah instruksi.",
-                tut4: "<strong>Tampilan:</strong> Klik ikon <i class='fa-solid fa-table-cells-large mx-1'></i> untuk mengubah baris grid foto.",
-                btnTut: "Mengerti, Mulai Memilih!", btnGuide: "Panduan", swipe: "Geser kiri/kanan", btnSelect: "Pilih Foto Ini", btnSelected: "Terpilih",
-                notePlaceholder: "Catatan edit (opsional), misal: hapus jerawat...", alertLimit: "Batas maksimal limit foto telah tercapai!",
-                alertEmpty: "Belum ada foto yang dipilih.", alertCopy: "List berhasil disalin ke Clipboard!", gridTip: "Ubah Baris Foto", reshuffleTip: "Acak foto"
+                tut2: "<strong>Zoom & Catatan:</strong> Klik ikon untuk memperbesar gambar & tambah instruksi edit.",
+                tut3: "<strong>Kirim List:</strong> Jika sudah selesai, klik tombol Kirim WA atau Download di bagian bawah.",
+                btnTut: "Mengerti, Mulai Memilih!",
+                btnGuide: "Panduan",
+                swipe: "Geser kiri/kanan",
+                btnSelect: "Pilih Foto Ini",
+                btnSelected: "Terpilih",
+                notePlaceholder: "Catatan edit (opsional)...",
+                alertLimit: "Batas maksimal limit foto telah tercapai!",
+                alertEmpty: "Belum ada foto yang dipilih.",
+                alertCopy: "List foto disalin!",
+                gridTip: "Ubah Baris Foto",
+                reshuffleTip: "Tekan ini untuk acak foto"
             },
             en: {
-                subtitle: "Secure Selection Tool", welcomeTitle: "Hello", welcomeDesc: "Welcome to the photo selection portal from <span class='font-bold text-white'>{vendor}</span>.",
-                quotaTitle: "Package Quota", quotaMax: "Max Photos", manualTitle: "Manual Gallery Access", manualDesc: "Please paste your Google Drive folder link below.",
-                btnOpen: "Open Gallery", loading: "Fetching data from Google Drive...", folderTitle: "Available Sub-Folders", btnBackFolder: "Go Back",
-                galleryTitle: "Photo Collection", galleryDesc: "Click an image to select. Click <i class='fa-solid fa-magnifying-glass-plus text-slate-800 dark:text-white mx-1'></i> to zoom & add notes.",
-                sortDefault: "Original Order", sortRandom: "Randomize", btnReshuffle: "Shuffle Again", btnViewSel: "View Selection", btnViewAll: "View All Folders",
-                quotaFooter: "Your Package Quota", selFooterTitle: "Selected Photos", selFooterDesc: "Send this list to our team", btnDownload: "Download", btnWA: "Send via WA",
-                tutTitle: "How to Select Photos", tutDesc: "Follow these simple steps:",
-                tut1: "<strong>Select Photo:</strong> Click directly on the image to select it.", tut2: "<strong>Zoom & Notes:</strong> Click the <i class='fa-solid fa-magnifying-glass-plus mx-1'></i> icon.",
-                tut4: "<strong>View:</strong> Click the <i class='fa-solid fa-table-cells-large mx-1'></i> icon to change grid.",
-                btnTut: "Got it, Start Selecting!", btnGuide: "Guide", swipe: "Swipe left/right", btnSelect: "Select This Photo", btnSelected: "Selected",
-                notePlaceholder: "Edit notes (optional)...", alertLimit: "Maximum photo limit reached!", alertEmpty: "No photos selected yet.",
-                alertCopy: "List copied to clipboard!", gridTip: "Change Grid", reshuffleTip: "Reshuffle"
+                subtitle: "Secure Selection Tool",
+                welcomeTitle: "Hello",
+                welcomeDesc: "Welcome to the photo selection portal from <span class='font-bold text-white'>{vendor}</span>[cite: 1].",
+                quotaTitle: "Package Quota",
+                quotaMax: "Max Photos",
+                manualTitle: "Manual Gallery Access",
+                manualDesc: "Please paste your Google Drive folder link below.",
+                btnOpen: "Open Gallery",
+                loading: "Fetching data from Google Drive...",
+                folderTitle: "Available Sub-Folders",
+                btnBackFolder: "Go Back",
+                galleryTitle: "Photo Collection",
+                galleryDesc: "Click an image to select.",
+                sortDefault: "Original Order",
+                sortRandom: "Randomize",
+                btnReshuffle: "Shuffle Again",
+                btnViewSel: "View Selection",
+                btnViewAll: "View All Folders",
+                quotaFooter: "Your Package Quota",
+                selFooterTitle: "Selected Photos",
+                selFooterDesc: "Send this list to our team",
+                btnDownload: "Download List",
+                btnWA: "Send via WA",
+                tutTitle: "How to Select Photos",
+                tutDesc: "Follow these simple steps:",
+                tut1: "<strong>Select Photo:</strong> Click directly on the image to select it.",
+                tut2: "<strong>Zoom & Notes:</strong> Click the icon to enlarge & add notes.",
+                tut3: "<strong>Send List:</strong> When finished, click send or download.",
+                btnTut: "Got it, Start Selecting!",
+                btnGuide: "Guide",
+                swipe: "Swipe left/right",
+                btnSelect: "Select This Photo",
+                btnSelected: "Selected",
+                notePlaceholder: "Edit notes (optional)...",
+                alertLimit: "Maximum photo limit reached!",
+                alertEmpty: "No photos selected yet.",
+                alertCopy: "List copied!",
+                gridTip: "Change Grid Rows",
+                reshuffleTip: "Click to reshuffle"
             }
         };
 
         function toggleDarkMode() {
-            const html = document.documentElement; html.classList.toggle('dark');
+            const html = document.documentElement;
+            html.classList.toggle('dark');
             const isDark = html.classList.contains('dark');
-            localStorage.setItem('theme', isDark ? 'dark' : 'light'); updateDarkModeIcon(isDark);
+            localStorage.setItem('theme', isDark ? 'dark' : 'light');
+            updateDarkModeIcon(isDark);
         }
+
         function updateDarkModeIcon(isDark) {
-            const btn = document.getElementById('darkModeBtn'); if (!btn) return;
-            btn.innerHTML = isDark ? '<i class="fa-solid fa-sun text-yellow-400"></i>' : '<i class="fa-solid fa-moon text-slate-600 dark:text-slate-300"></i>';
+            const btn = document.getElementById('darkModeBtn');
+            if (!btn) return;
+            if (isDark) {
+                btn.innerHTML = '<i class="fa-solid fa-sun text-yellow-400"></i>';
+            } else {
+                btn.innerHTML = '<i class="fa-solid fa-moon text-slate-600 dark:text-slate-300"></i>';
+            }
         }
+
         function toggleLanguage() {
             appState.lang = appState.lang === 'id' ? 'en' : 'id';
-            document.getElementById('langDisplay').textContent = appState.lang === 'id' ? 'EN' : 'ID'; applyTranslations();
+            document.getElementById('langDisplay').textContent = appState.lang === 'id' ? 'EN' : 'ID';
+            applyTranslations();
         }
+
         function applyTranslations() {
             const langData = TRANSLATIONS[appState.lang];
             const vendorName = (typeof CONFIG_APP !== 'undefined' && CONFIG_APP.namaVendor) ? CONFIG_APP.namaVendor : 'Studio Foto';
+
             document.querySelectorAll('[data-i18n]').forEach(el => {
                 const key = el.getAttribute('data-i18n');
                 if (langData[key]) {
-                    let text = langData[key].replace('{vendor}', vendorName);
-                    if (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA') el.placeholder = text; else el.innerHTML = text;
+                    let textToDisplay = langData[key].replace('{vendor}', vendorName);
+                    if (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA') {
+                        el.placeholder = textToDisplay;
+                    } else {
+                        el.innerHTML = textToDisplay;
+                    }
                 }
             });
-            updateViewModeText(); if (currentZoomPhoto) updateLightboxSelectBtn();
+            updateViewModeText();
+            if (currentZoomPhoto) updateLightboxSelectBtn();
         }
 
-        document.addEventListener("DOMContentLoaded", () => {
-            updateDarkModeIcon(document.documentElement.classList.contains('dark'));
-            if (typeof CONFIG_APP !== 'undefined') { document.getElementById('footerVendorName').textContent = CONFIG_APP.namaVendor || 'Studio Foto'; }
+        let currentZoomIndex = 0; 
+        let currentZoomPhoto = null;
+        let touchstartX = 0;
+        let touchendX = 0;
+        let hasSeenTutorial = false; 
+        let tooltipTimeout;
 
-            appState.kuota = 15;
-            document.getElementById('quotaContainer').classList.remove('hidden'); document.getElementById('quotaContainer').classList.add('block');
-            document.getElementById('greetingQuotaInfo').classList.remove('hidden'); document.getElementById('greetingQuotaInfo').classList.add('flex');
-            document.getElementById('greetingQuotaLimit').textContent = appState.kuota;
-
-            const urlParams = new URLSearchParams(window.location.search);
-            if (urlParams.get('n')) {
-                appState.clientName = decodeURIComponent(urlParams.get('n')).replace(/-/g, ' ');
-                document.getElementById('displayClientName').textContent = appState.clientName;
-                document.getElementById('greetingSection').classList.remove('hidden');
+        function hideTooltip(id) {
+            const el = document.getElementById(id);
+            if(el) {
+                el.classList.replace('opacity-100', 'opacity-0');
+                setTimeout(() => el.classList.add('hidden'), 300);
             }
-            if (urlParams.get('i')) {
-                document.getElementById('driveLink').value = `https://drive.google.com/drive/folders/${urlParams.get('i')}`;
-                document.getElementById('inputSection').classList.add('hidden');
-                setTimeout(() => { loadFromDrive(); }, 500);
-            } else { document.getElementById('inputSection').classList.remove('hidden'); }
+        }
 
-            const lightboxEl = document.getElementById('lightbox');
-            lightboxEl.addEventListener('touchstart', e => { if (e.target.tagName.toLowerCase() !== 'textarea') touchstartX = e.changedTouches[0].screenX; }, { passive: true });
-            lightboxEl.addEventListener('touchend', e => { if (e.target.tagName.toLowerCase() !== 'textarea') { touchendX = e.changedTouches[0].screenX; handleSwipeGesture(); } }, { passive: true });
-            applyTranslations(); 
-        });
-
-        function hideTooltip(id) { const el = document.getElementById(id); if(el) { el.classList.replace('opacity-100', 'opacity-0'); setTimeout(() => el.classList.add('hidden'), 300); } }
         function triggerTooltipsAnimation() {
-            clearTimeout(tooltipTimeout); const gt = document.getElementById('gridTooltip'); const rt = document.getElementById('reshuffleTooltip');
+            clearTimeout(tooltipTimeout);
+            const gt = document.getElementById('gridTooltip');
+            const rt = document.getElementById('reshuffleTooltip');
+            
             if(gt) { gt.classList.remove('hidden'); setTimeout(()=> gt.classList.replace('opacity-0', 'opacity-100'), 50); }
             if(rt && document.getElementById('sortDropdown').value === 'random') { rt.classList.remove('hidden'); setTimeout(()=> rt.classList.replace('opacity-0', 'opacity-100'), 50); }
-            tooltipTimeout = setTimeout(() => { hideTooltip('gridTooltip'); hideTooltip('reshuffleTooltip'); }, 8000);
+            
+            tooltipTimeout = setTimeout(() => {
+                hideTooltip('gridTooltip');
+                hideTooltip('reshuffleTooltip');
+            }, 8000);
         }
+
         function toggleGridSize() {
-            appState.gridMode = appState.gridMode === 2 ? 4 : appState.gridMode === 4 ? 6 : 2; renderGallery();
-            showAlert(appState.lang === 'id' ? 'Tampilan: ' + appState.gridMode + ' Foto per baris' : 'View: ' + appState.gridMode + ' Photos per row');
+            if (appState.gridMode === 2) {
+                appState.gridMode = 4;
+            } else if (appState.gridMode === 4) {
+                appState.gridMode = 6;
+            } else {
+                appState.gridMode = 2;
+            }
+            renderGallery();
+            const lang = appState.lang === 'id' ? 'Tampilan: ' + appState.gridMode + ' Foto per baris' : 'View: ' + appState.gridMode + ' Photos per row';
+            showAlert(lang, 'success');
         }
-        function showTutorial(force = false) {
-            if (hasSeenTutorial && !force) return;
-            const modal = document.getElementById('tutorialModal'), content = document.getElementById('tutorialContent');
-            modal.classList.remove('hidden'); modal.classList.add('flex');
-            setTimeout(() => { modal.classList.replace('opacity-0', 'opacity-100'); content.classList.replace('scale-95', 'scale-100'); }, 10);
+
+        function showTutorial(forceManual = false) {
+            if (hasSeenTutorial && !forceManual) return;
+            const modal = document.getElementById('tutorialModal');
+            const content = document.getElementById('tutorialContent');
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+            setTimeout(() => {
+                modal.classList.replace('opacity-0', 'opacity-100');
+                content.classList.replace('scale-95', 'scale-100');
+            }, 10);
             hasSeenTutorial = true;
         }
+
         function closeTutorial() {
-            const modal = document.getElementById('tutorialModal'), content = document.getElementById('tutorialContent');
-            modal.classList.replace('opacity-100', 'opacity-0'); content.classList.replace('scale-100', 'scale-95');
-            setTimeout(() => { modal.classList.remove('flex'); modal.classList.add('hidden'); triggerTooltipsAnimation(); }, 300);
+            const modal = document.getElementById('tutorialModal');
+            const content = document.getElementById('tutorialContent');
+            modal.classList.replace('opacity-100', 'opacity-0');
+            content.classList.replace('scale-100', 'scale-95');
+            setTimeout(() => {
+                modal.classList.remove('flex');
+                modal.classList.add('hidden');
+                triggerTooltipsAnimation();
+            }, 300);
         }
+
         function handleSwipeGesture() {
-            if (touchendX < touchstartX - 50 && currentZoomIndex < (appState.viewMode === 'selected' ? appState.selectedMap.size : appState.photos.length) - 1) nextPhoto();
-            if (touchendX > touchstartX + 50 && currentZoomIndex > 0) prevPhoto();
+            const minSwipeDistance = 50; 
+            if (touchendX < touchstartX - minSwipeDistance) {
+                if (currentZoomIndex < (appState.viewMode === 'selected' ? appState.selectedMap.size : appState.photos.length) - 1) nextPhoto();
+            }
+            if (touchendX > touchstartX + minSwipeDistance) {
+                if (currentZoomIndex > 0) prevPhoto();
+            }
         }
+
         function saveProgress() {
             if (!appState.rootFolderId) return;
-            localStorage.setItem(`client_portal_save_${appState.rootFolderId}`, JSON.stringify({ selected: Array.from(appState.selectedMap.entries()), notes: appState.notes }));
+            const dataToSave = { 
+                selected: Array.from(appState.selectedMap.entries()), 
+                notes: appState.notes 
+            };
+            localStorage.setItem(`client_portal_save_${appState.rootFolderId}`, JSON.stringify(dataToSave));
         }
-        function loadProgress(rootId) {
-            const saved = localStorage.getItem(`client_portal_save_${rootId}`);
-            if (saved) {
+
+        function loadProgress(rootFolderId) {
+            const savedData = localStorage.getItem(`client_portal_save_${rootFolderId}`);
+            if (savedData) {
                 try {
-                    const data = JSON.parse(saved); appState.selectedMap = new Map(data.selected || []); appState.notes = data.notes || {};
-                    if (appState.selectedMap.size > 0) setTimeout(() => { updateActionBar(); }, 1000);
-                } catch (e) {}
-            } else { appState.selectedMap = new Map(); appState.notes = {}; }
-        }
-        function showAlert(msg, type = 'success') {
-            const box = document.getElementById('customAlert'); document.getElementById('alertText').textContent = msg;
-            document.getElementById('alertIcon').className = type === 'success' ? "fa-solid fa-circle-check text-green-400 text-lg" : "fa-solid fa-triangle-exclamation text-red-400 text-lg";
-            box.classList.remove('-translate-y-32', 'opacity-0'); setTimeout(() => box.classList.add('-translate-y-32', 'opacity-0'), 3000);
-        }
-        function extractFolderId(url) {
-            const match = url.match(/folders\/([a-zA-Z0-9-_]+)/); if (match) return match[1]; return url.match(/id=([a-zA-Z0-9-_]+)/)?.[1] || null;
-        }
-
-        // ==========================================
-        // PERBAIKAN LOGIKA LOAD FROM DRIVE (ANTI-STUCK KETAT)
-        // ==========================================
-        let isFetchingDrive = false;
-
-        async function loadFromDrive(overrideId = null, folderName = null, isNavBack = false) {
-            if (isFetchingDrive) return;
-            isFetchingDrive = true;
-
-            let targetId = overrideId;
-            let previousFolderId = appState.folderId; 
-
-            try {
-                if (typeof CONFIG_APP === 'undefined' || !CONFIG_APP.googleApiKey) {
-                    throw new Error("Sistem (API Key) belum dikonfigurasi.");
-                }
-
-                if (!targetId) {
-                    const rawLink = document.getElementById('driveLink').value.trim();
-                    targetId = extractFolderId(rawLink) || rawLink;
-                    if (!targetId) throw new Error("Link Google Drive tidak valid/kosong.");
-                }
-
-                document.getElementById('inputSection').classList.add('hidden');
-                document.getElementById('galleryContainer').classList.add('hidden');
-                document.getElementById('loadingState').classList.remove('hidden'); 
-                document.getElementById('loadingState').classList.add('flex');
-
-                let fetched = []; 
-                let token = ""; 
-                const q = encodeURIComponent(`'${targetId}' in parents and trashed=false`);
-                
-                do {
-                    let url = `https://www.googleapis.com/drive/v3/files?q=${q}&fields=nextPageToken,files(id,name,mimeType,thumbnailLink)&key=${CONFIG_APP.googleApiKey}&pageSize=1000`;
-                    if (token) url += `&pageToken=${token}`;
-                    
-                    const res = await fetch(url); 
-                    const data = await res.json();
-                    
-                    if (!res.ok) {
-                        throw new Error(data.error?.message || "Akses ditolak. Pastikan hak akses folder adalah Publik.");
+                    const data = JSON.parse(savedData);
+                    appState.selectedMap = new Map(data.selected || []);
+                    appState.notes = data.notes || {};
+                    if (appState.selectedMap.size > 0) {
+                        setTimeout(() => { updateActionBar(); }, 1000);
                     }
+                } catch (e) { console.error("Gagal memuat data", e); }
+            } else {
+                appState.selectedMap = new Map();
+                appState.notes = {};
+            }
+        }
 
-                    if (data.files) fetched = fetched.concat(data.files); 
-                    token = data.nextPageToken;
-                } while (token);
+        function showAlert(message, type = 'success') {
+            const alertBox = document.getElementById('customAlert');
+            const alertText = document.getElementById('alertText');
+            const alertIcon = document.getElementById('alertIcon');
+            alertText.textContent = message;
+            alertIcon.className = type === 'success' ? "fa-solid fa-circle-check text-green-400 text-lg" : "fa-solid fa-triangle-exclamation text-red-400 text-lg";
+            alertBox.classList.remove('-translate-y-32', 'opacity-0');
+            setTimeout(() => alertBox.classList.add('-translate-y-32', 'opacity-0'), 3000);
+        }
 
-                if (!overrideId) {
-                    appState.rootFolderId = targetId; 
-                    appState.folderHistory = []; 
-                    loadProgress(appState.rootFolderId); 
-                } else if (!isNavBack) {
-                    let currentNameDisplay = document.getElementById('currentFolderDisplay').innerText.trim();
-                    appState.folderHistory.push({ 
-                        id: previousFolderId, 
-                        name: appState.folderHistory.length === 0 ? "Galeri Utama" : currentNameDisplay
-                    });
-                } else {
-                    appState.folderHistory.pop();
+        function extractFolderId(url) {
+            const match = url.match(/folders\/([a-zA-Z0-9-_]+)/);
+            if (match && match[1]) return match[1];
+            return url.match(/id=([a-zA-Z0-9-_]+)/)?.[1] || null;
+        }
+
+        // ==========================================================
+        // MENGGUNAKAN MESIN ASLI ANDA YANG 100% LANCAR DI SUB-FOLDER
+        // ==========================================================
+        async function loadFromDrive(overrideFolderId = null, folderName = null, isNavigatingBack = false) {
+            if (typeof CONFIG_APP === 'undefined' || !CONFIG_APP.googleApiKey) return showAlert('Sistem belum dikonfigurasi.', 'error');
+            
+            let targetFolderId = overrideFolderId;
+            
+            if (!targetFolderId) {
+                const link = document.getElementById('driveLink').value.trim();
+                targetFolderId = extractFolderId(link) || link;
+                if (!targetFolderId) return showAlert('Link Google Drive tidak valid.', 'error');
+                
+                appState.rootFolderId = targetFolderId;
+                appState.folderHistory = [];
+                loadProgress(appState.rootFolderId); 
+                document.getElementById('inputSection').classList.add('hidden');
+            } else {
+                if (!isNavigatingBack) {
+                    const currentName = appState.folderHistory.length === 0 ? "Galeri Utama" : document.getElementById('currentFolderDisplay').innerText;
+                    appState.folderHistory.push({ id: appState.folderId, name: currentName });
                 }
+            }
 
-                appState.folderId = targetId; 
-                appState.currentPage = 1; 
-                appState.viewMode = 'all';
-                
-                const displayTitle = (targetId === appState.rootFolderId) ? TRANSLATIONS[appState.lang].galleryTitle : folderName;
-                document.getElementById('currentFolderDisplay').innerHTML = (targetId === appState.rootFolderId) ? displayTitle : `<i class="fa-solid fa-folder-open text-blue-500 mr-2"></i> ${displayTitle}`;
+            appState.folderId = targetFolderId;
+            appState.currentPage = 1; 
+            appState.viewMode = 'all';
+            
+            const displayTitle = (targetFolderId === appState.rootFolderId) ? TRANSLATIONS[appState.lang].galleryTitle : folderName;
+            document.getElementById('currentFolderDisplay').innerHTML = (targetFolderId === appState.rootFolderId) 
+                ? displayTitle 
+                : `<i class="fa-solid fa-folder-open text-blue-500 mr-2"></i> ${displayTitle}`;
 
-                appState.folders = fetched.filter(f => f.mimeType === 'application/vnd.google-apps.folder');
-                let pFiles = fetched.filter(f => f.mimeType !== 'application/vnd.google-apps.folder' && f.thumbnailLink);
-                
-                appState.originalPhotos = pFiles.map(f => ({ 
-                    id: f.id, name: f.name, folderName: displayTitle, 
-                    url: f.thumbnailLink?.replace('=s220', '=s500'), fullUrl: f.thumbnailLink?.replace('=s220', '=s1600') 
-                }));
-                appState.photos = appState.originalPhotos.slice(0, 30); 
-                
-                renderFolders(); 
-                document.getElementById('sortDropdown').value = 'random'; 
-                applySort('random'); 
-                
-                if (!overrideId) setTimeout(() => { showTutorial(false); }, 800); 
-                else if(hasSeenTutorial) setTimeout(triggerTooltipsAnimation, 500);
+            document.getElementById('loadingState').classList.remove('hidden');
+            document.getElementById('loadingState').classList.add('flex');
+            document.getElementById('galleryContainer').classList.add('hidden');
+            
+            try {
+                let fetchedFiles = []; let nextPageToken = "";
+                const query = encodeURIComponent(`'${targetFolderId}' in parents and trashed=false`);
+                do {
+                    let apiUrl = `https://www.googleapis.com/drive/v3/files?q=${query}&fields=nextPageToken,files(id,name,mimeType,thumbnailLink)&key=${CONFIG_APP.googleApiKey}&pageSize=1000`;
+                    if (nextPageToken) apiUrl += `&pageToken=${nextPageToken}`;
+                    const response = await fetch(apiUrl);
+                    const data = await response.json();
+                    if (data.files) fetchedFiles = fetchedFiles.concat(data.files);
+                    nextPageToken = data.nextPageToken;
+                } while (nextPageToken);
 
-            } catch (e) { 
-                console.error("Fetch Drive Error:", e);
-                showAlert(`Gagal: ${e.message}`, 'error'); 
-                
-                document.getElementById('loadingState').classList.add('hidden'); 
-                document.getElementById('loadingState').classList.remove('flex');
-                
-                if (!previousFolderId || previousFolderId === appState.rootFolderId && appState.photos.length === 0) {
-                    document.getElementById('inputSection').classList.remove('hidden');
+                if (fetchedFiles.length > 0 || appState.folderHistory.length > 0) {
+                    appState.folders = fetchedFiles.filter(f => f.mimeType === 'application/vnd.google-apps.folder');
+                    let photoFiles = fetchedFiles.filter(f => f.mimeType !== 'application/vnd.google-apps.folder' && f.thumbnailLink);
+                    
+                    appState.photos = photoFiles.map(f => ({ 
+                        id: f.id, name: f.name, folderName: displayTitle,
+                        url: f.thumbnailLink?.replace('=s220', '=s500'), 
+                        fullUrl: f.thumbnailLink?.replace('=s220', '=s1600') 
+                    }));
+                    appState.originalPhotos = [...appState.photos];
+                    
+                    renderFolders(); 
+                    
+                    document.getElementById('sortDropdown').value = 'random';
+                    applySort('random');
+                    
+                    if (!overrideFolderId) { 
+                        setTimeout(() => { showTutorial(false); }, 800); 
+                    } else {
+                        if(hasSeenTutorial) setTimeout(triggerTooltipsAnimation, 500);
+                    }
                 } else {
+                    showAlert('Folder kosong atau hak akses bukan Publik.', 'error');
+                    document.getElementById('loadingState').classList.add('hidden');
                     document.getElementById('galleryContainer').classList.remove('hidden');
                 }
-            } finally {
-                isFetchingDrive = false;
+            } catch (error) {
+                showAlert('Gagal terhubung ke Google Drive.', 'error');
+                document.getElementById('loadingState').classList.add('hidden');
+                document.getElementById('galleryContainer').classList.remove('hidden');
             }
         }
 
         function renderFolders() {
-            const c = document.getElementById('folderNavContainer'), g = document.getElementById('folderGrid'), b = document.getElementById('btnBackFolder');
-            g.innerHTML = ''; b.classList.toggle('hidden', appState.folderHistory.length === 0);
-            if (appState.folders.length === 0 && appState.folderHistory.length === 0) { c.classList.add('hidden'); return; }
-            c.classList.remove('hidden');
-            appState.folders.forEach(f => {
+            const container = document.getElementById('folderNavContainer');
+            const grid = document.getElementById('folderGrid');
+            const btnBack = document.getElementById('btnBackFolder');
+            grid.innerHTML = '';
+
+            if (appState.folderHistory.length > 0) {
+                btnBack.classList.remove('hidden');
+            } else {
+                btnBack.classList.add('hidden');
+            }
+
+            if (appState.folders.length === 0 && appState.folderHistory.length === 0) {
+                container.classList.add('hidden');
+                return;
+            }
+            container.classList.remove('hidden');
+
+            appState.folders.forEach(folder => {
                 const btn = document.createElement('button');
-                btn.className = "flex items-center gap-3 p-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-600 rounded-xl hover:border-blue-50 hover:shadow-md transition text-left group";
-                btn.innerHTML = `<i class="fa-solid fa-folder text-yellow-400 group-hover:text-blue-500 text-2xl"></i> <span class="font-bold text-xs md:text-sm text-slate-700 dark:text-slate-200 w-full truncate">${f.name}</span>`;
-                btn.onclick = () => loadFromDrive(f.id, f.name, false); g.appendChild(btn);
+                btn.className = "flex items-center gap-3 p-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-600 rounded-xl hover:border-blue-500 dark:hover:border-blue-400 hover:shadow-md transition text-left group";
+                btn.innerHTML = `<i class="fa-solid fa-folder text-yellow-400 group-hover:text-blue-500 transition text-2xl"></i> <span class="font-bold text-xs md:text-sm text-slate-700 dark:text-slate-200 w-full line-clamp-2">${folder.name}</span>`;
+                btn.onclick = () => { loadFromDrive(folder.id, folder.name, false); };
+                grid.appendChild(btn);
             });
-            if(appState.folders.length === 0) g.innerHTML = `<p class="text-xs text-slate-500 col-span-full">Tidak ada sub-folder lagi.</p>`;
-        }
-
-        function navigateBackFolder() { 
-            if (appState.folderHistory.length) { 
-                const p = appState.folderHistory[appState.folderHistory.length - 1]; 
-                loadFromDrive(p.id, p.name, true); 
-            } 
-        }
-        
-        function applySort(order) {
-            appState.sortOrder = order; const btnR = document.getElementById('btnReshuffle');
-            if (order === 'random') { btnR.classList.remove('hidden'); document.getElementById('sortDropdown').value = 'random'; } 
-            else { btnR.classList.add('hidden'); hideTooltip('reshuffleTooltip'); }
-
-            if (order === 'default') { appState.photos = appState.originalPhotos.slice(0, 30); }
-            else if (order === 'asc') { let sorted = [...appState.originalPhotos].sort((a, b) => a.name.localeCompare(b.name, undefined, {numeric: true})); appState.photos = sorted.slice(0, 30); }
-            else if (order === 'desc') { let sorted = [...appState.originalPhotos].sort((a, b) => b.name.localeCompare(a.name, undefined, {numeric: true})); appState.photos = sorted.slice(0, 30); }
-            else if (order === 'random') { let arr = [...appState.originalPhotos]; for (let i = arr.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [arr[i], arr[j]] = [arr[j], arr[i]]; } appState.photos = arr.slice(0, 30); }
             
-            appState.currentPage = 1; renderGallery();
-            if(order === 'random') { 
-                const i = btnR.querySelector('i'); 
-                if(i) {
-                    i.classList.add('fa-spin'); 
-                    setTimeout(() => i.classList.remove('fa-spin'), 500); 
+            if(appState.folders.length === 0 && appState.folderHistory.length > 0) {
+                 grid.innerHTML = `<p class="text-xs text-slate-500 dark:text-slate-400 col-span-full">Tidak ada sub-folder lagi di dalam sini.</p>`;
+            }
+        }
+
+        function navigateBackFolder() {
+            if (appState.folderHistory.length === 0) return;
+            const prevFolder = appState.folderHistory.pop();
+            loadFromDrive(prevFolder.id, prevFolder.name, true);
+        }
+
+        function applySort(order) {
+            appState.sortOrder = order;
+            const btnReshuffle = document.getElementById('btnReshuffle');
+            const rtTooltip = document.getElementById('reshuffleTooltip');
+            
+            if (order === 'random') {
+                btnReshuffle.classList.remove('hidden');
+                document.getElementById('sortDropdown').value = 'random'; 
+            } else {
+                btnReshuffle.classList.add('hidden');
+                if(rtTooltip) hideTooltip('reshuffleTooltip'); 
+            }
+
+            if (order === 'default') {
+                appState.photos = [...appState.originalPhotos];
+            } else if (order === 'asc') {
+                appState.photos.sort((a, b) => a.name.localeCompare(b.name, undefined, {numeric: true, sensitivity: 'base'}));
+            } else if (order === 'desc') {
+                appState.photos.sort((a, b) => b.name.localeCompare(a.name, undefined, {numeric: true, sensitivity: 'base'}));
+            } else if (order === 'random') {
+                let array = [...appState.photos];
+                for (let i = array.length - 1; i > 0; i--) {
+                    const j = Math.floor(Math.random() * (i + 1));
+                    [array[i], array[j]] = [array[j], array[i]];
                 }
+                appState.photos = array;
+            }
+            appState.currentPage = 1;
+            renderGallery();
+            
+            if(order === 'random') {
+                const icon = btnReshuffle.querySelector('i');
+                icon.classList.add('fa-spin');
+                setTimeout(() => icon.classList.remove('fa-spin'), 500);
             }
         }
 
         function updateViewModeText() {
-            const b = document.getElementById('viewModeBtn'), t = TRANSLATIONS[appState.lang];
-            if (appState.viewMode === 'all') { b.innerHTML = `<i class="fa-solid fa-filter"></i> <span id="btnViewText">${t.btnViewSel}</span> (${appState.selectedMap.size})`; b.className = "text-sm bg-slate-800 dark:bg-slate-700 text-white py-2 px-4 rounded-lg font-medium transition flex items-center gap-2 shadow-sm hover:bg-slate-700 dark:hover:bg-slate-600"; } 
-            else { b.innerHTML = `<i class="fa-solid fa-border-all"></i> <span id="btnViewText">${t.btnViewAll}</span>`; b.className = "text-sm bg-blue-600 text-white py-2 px-4 rounded-lg font-medium transition flex items-center gap-2 shadow-sm hover:bg-blue-700"; }
+            const btn = document.getElementById('viewModeBtn');
+            const langData = TRANSLATIONS[appState.lang];
+            if (appState.viewMode === 'all') {
+                btn.innerHTML = `<i class="fa-solid fa-filter"></i> <span id="btnViewText">${langData.btnViewSel}</span> (${appState.selectedMap.size})`;
+                btn.className = "text-sm bg-slate-800 dark:bg-slate-700 text-white py-2 px-4 rounded-lg font-medium transition flex items-center gap-2 shadow-sm hover:bg-slate-700 dark:hover:bg-slate-600 border border-transparent dark:border-slate-600";
+            } else {
+                btn.innerHTML = `<i class="fa-solid fa-border-all"></i> <span id="btnViewText">${langData.btnViewAll}</span>`;
+                btn.className = "text-sm bg-blue-600 text-white py-2 px-4 rounded-lg font-medium transition flex items-center gap-2 shadow-sm hover:bg-blue-700 border border-transparent";
+            }
         }
+
         function toggleViewMode() {
             if (appState.viewMode === 'all') {
                 if (appState.selectedMap.size === 0) return showAlert(TRANSLATIONS[appState.lang].alertEmpty, 'error');
-                appState.viewMode = 'selected'; document.getElementById('folderNavContainer').classList.add('hidden');
+                appState.viewMode = 'selected';
+                document.getElementById('folderNavContainer').classList.add('hidden'); 
             } else {
-                appState.viewMode = 'all'; if (appState.folders.length || appState.folderHistory.length) document.getElementById('folderNavContainer').classList.remove('hidden');
+                appState.viewMode = 'all';
+                if (appState.folders.length > 0 || appState.folderHistory.length > 0) {
+                    document.getElementById('folderNavContainer').classList.remove('hidden');
+                }
             }
-            updateViewModeText(); appState.currentPage = 1; renderGallery();
+            updateViewModeText();
+            appState.currentPage = 1;
+            renderGallery();
         }
 
         function renderGallery() {
-            document.getElementById('loadingState').classList.add('hidden'); document.getElementById('loadingState').classList.remove('flex');
+            document.getElementById('loadingState').classList.add('hidden');
+            document.getElementById('loadingState').classList.remove('flex');
             document.getElementById('galleryContainer').classList.remove('hidden');
-            const g = document.getElementById('photoGrid'); g.innerHTML = '';
             
-            let gC = '', gap = '', isSm = appState.gridMode > 2;
-            if (appState.gridMode === 2) { gC = 'grid-cols-2 md:grid-cols-3 lg:grid-cols-4'; gap = 'gap-4 md:gap-6'; }
-            else if (appState.gridMode === 4) { gC = 'grid-cols-4 md:grid-cols-5 lg:grid-cols-6'; gap = 'gap-2 md:gap-4'; }
-            else { gC = 'grid-cols-6 md:grid-cols-8 lg:grid-cols-10'; gap = 'gap-1.5 md:gap-3'; }
-            g.className = `grid ${gC} ${gap} mb-8 transition-all`;
+            const grid = document.getElementById('photoGrid'); 
+            grid.innerHTML = '';
+            
+            let gridClasses = '';
+            let gapClass = '';
+            let isSmallGrid = appState.gridMode > 2;
 
-            const pList = appState.viewMode === 'selected' ? Array.from(appState.selectedMap.values()) : appState.photos;
-            const pShow = pList.slice((appState.currentPage - 1) * ITEMS_PER_PAGE, appState.currentPage * ITEMS_PER_PAGE);
-
-            if (pShow.length === 0 && appState.viewMode === 'all') {
-                g.innerHTML = `<div class="col-span-full text-center py-10 text-slate-500 font-medium">Folder ini kosong atau hanya berisi folder lain.</div>`;
+            if (appState.gridMode === 2) {
+                gridClasses = 'grid-cols-2 md:grid-cols-3 lg:grid-cols-4';
+                gapClass = 'gap-4 md:gap-6';
+            } else if (appState.gridMode === 4) {
+                gridClasses = 'grid-cols-4 md:grid-cols-5 lg:grid-cols-6';
+                gapClass = 'gap-2 md:gap-4';
+            } else if (appState.gridMode === 6) {
+                gridClasses = 'grid-cols-6 md:grid-cols-8 lg:grid-cols-10';
+                gapClass = 'gap-1.5 md:gap-3';
             }
+            
+            grid.className = `grid ${gridClasses} ${gapClass} mb-8 transition-all duration-300`;
 
-            pShow.forEach((p, i) => {
-                const gIdx = appState.photos.findIndex(x => x.id === p.id);
-                const c = document.createElement('div'); c.className = `photo-card relative bg-slate-100 dark:bg-slate-800 rounded-xl overflow-hidden aspect-square shadow-sm cursor-pointer ${appState.selectedMap.has(p.id) ? 'selected' : ''}`;
+            const photosToProcess = appState.viewMode === 'selected' 
+                ? Array.from(appState.selectedMap.values()) 
+                : appState.photos;
+
+            const startIndex = (appState.currentPage - 1) * ITEMS_PER_PAGE;
+            const endIndex = startIndex + ITEMS_PER_PAGE;
+            const photosToShow = photosToProcess.slice(startIndex, endIndex);
+
+            photosToShow.forEach((photo, index) => {
+                const globalIndex = appState.photos.findIndex(p => p.id === photo.id); 
+                const card = document.createElement('div');
+                card.className = `photo-card relative bg-slate-100 dark:bg-slate-800 rounded-xl overflow-hidden aspect-square shadow-sm hover:shadow-md ${appState.selectedMap.has(photo.id) ? 'selected' : ''}`;
                 
-                const img = document.createElement('img'); img.src = p.url; img.className = "w-full h-full object-cover transition-transform duration-300"; img.loading = "lazy"; img.onclick = () => toggleSelect(p, c);
+                const img = document.createElement('img');
+                img.src = photo.url; 
+                img.className = "w-full h-full object-cover cursor-pointer transition-transform duration-300"; 
+                img.loading = "lazy";
+                img.onclick = () => toggleSelect(photo, card);
                 
-                const ov = document.createElement('div'); ov.className = "selected-overlay absolute inset-0 bg-slate-900/10 dark:bg-black/20 z-10 flex items-start justify-end p-2 pointer-events-none";
-                const bS = isSm ? 'w-5 h-5 text-[10px]' : 'w-8 h-8 text-sm'; ov.innerHTML = `<div class="check-badge bg-blue-600 text-white ${bS} rounded-full flex items-center justify-center shadow-lg"><i class="fa-solid fa-check"></i></div>`;
+                const overlay = document.createElement('div');
+                overlay.className = "selected-overlay absolute inset-0 bg-slate-900/10 dark:bg-black/20 z-10 flex items-start justify-end p-2 pointer-events-none";
                 
-                if (appState.notes[p.id]) {
-                    const nb = document.createElement('div'); nb.className = `absolute top-2 ${isSm ? 'right-8' : 'right-12'} bg-yellow-500 text-white ${bS} rounded-full flex items-center justify-center shadow-md z-20 pointer-events-none`;
-                    nb.innerHTML = '<i class="fa-solid fa-comment-dots"></i>'; ov.appendChild(nb);
+                const badgeSize = isSmallGrid ? 'w-5 h-5 text-[10px]' : 'w-8 h-8 text-sm';
+                overlay.innerHTML = `<div class="check-badge bg-blue-600 text-white ${badgeSize} rounded-full flex items-center justify-center shadow-lg"><i class="fa-solid fa-check"></i></div>`;
+                
+                if (appState.notes[photo.id]) {
+                    const noteBadge = document.createElement('div');
+                    const rightPos = isSmallGrid ? 'right-8' : 'right-12';
+                    noteBadge.className = `note-badge absolute top-2 ${rightPos} bg-yellow-500 text-white ${badgeSize} rounded-full flex items-center justify-center shadow-md z-20 pointer-events-none`;
+                    noteBadge.innerHTML = '<i class="fa-solid fa-comment-dots"></i>';
+                    overlay.appendChild(noteBadge);
                 }
 
-                const bA = document.createElement('div'); bA.className = `absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent ${isSm ? 'p-1.5 pt-4' : 'p-3 pt-8'} flex justify-between items-end z-20`;
-                const nT = document.createElement('p'); nT.className = `text-white ${isSm ? 'text-[9px]' : 'text-xs'} font-medium truncate drop-shadow-md w-3/4`; nT.textContent = p.name;
+                const bottomArea = document.createElement('div');
+                const bottomPad = isSmallGrid ? 'p-1.5 pt-4' : 'p-3 pt-8';
+                const textSize = isSmallGrid ? 'text-[9px]' : 'text-xs';
+                const btnSize = isSmallGrid ? 'w-5 h-5 text-[10px] rounded' : 'w-8 h-8 rounded-lg';
+
+                bottomArea.className = `absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent ${bottomPad} flex justify-between items-end z-20`;
                 
-                const zB = document.createElement('button'); zB.className = `text-white bg-black/40 hover:bg-blue-600 ${isSm ? 'w-5 h-5 text-[10px] rounded' : 'w-8 h-8 rounded-lg'} flex items-center justify-center shadow-lg transition-colors`;
-                zB.innerHTML = '<i class="fa-solid fa-magnifying-glass-plus"></i>'; zB.onclick = (e) => { e.stopPropagation(); openLightbox(appState.viewMode === 'selected' ? i : gIdx); };
+                const nameText = document.createElement('p');
+                nameText.className = `text-white ${textSize} font-medium truncate drop-shadow-md w-3/4`;
+                nameText.textContent = photo.name;
 
-                bA.appendChild(nT); bA.appendChild(zB); c.appendChild(img); c.appendChild(ov); c.appendChild(bA); g.appendChild(c);
+                const zoomBtn = document.createElement('button');
+                zoomBtn.className = `text-white bg-black/40 hover:bg-blue-600 ${btnSize} flex items-center justify-center shadow-lg transition-colors`;
+                zoomBtn.innerHTML = '<i class="fa-solid fa-magnifying-glass-plus"></i>';
+                
+                const targetIndex = appState.viewMode === 'selected' ? index : globalIndex;
+                zoomBtn.onclick = (e) => { e.stopPropagation(); openLightbox(targetIndex); };
+
+                bottomArea.appendChild(nameText); bottomArea.appendChild(zoomBtn);
+                card.appendChild(img); card.appendChild(overlay); card.appendChild(bottomArea);
+                grid.appendChild(card);
             });
-            renderPagination(pList.length);
+            renderPagination(photosToProcess.length);
         }
 
-        function renderPagination(tot) {
-            const c = document.getElementById('paginationContainer'), tP = Math.ceil(tot / ITEMS_PER_PAGE);
-            if (tP <= 1) { c.classList.add('hidden'); return; } c.classList.remove('hidden'); c.innerHTML = '';
-            
-            const pB = document.createElement('button'); pB.innerHTML = '<i class="fa-solid fa-chevron-left"></i> Prev'; pB.disabled = appState.currentPage === 1;
-            pB.className = `px-5 py-2.5 rounded-xl font-medium flex gap-2 ${appState.currentPage===1?'bg-slate-50 dark:bg-slate-800 text-slate-300 dark:text-slate-600':'bg-white dark:bg-slate-700 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-600 border border-slate-200 dark:border-slate-600'}`;
-            pB.onclick = () => { appState.currentPage--; renderGallery(); document.getElementById('galleryContainer').scrollIntoView(); };
-            
-            const i = document.createElement('span'); i.className = 'px-5 py-2.5 text-sm font-bold text-slate-700 dark:text-slate-200 bg-slate-100 dark:bg-slate-700 rounded-xl border border-slate-200 dark:border-slate-600'; i.textContent = `${appState.currentPage} / ${tP}`;
-            
-            const nB = document.createElement('button'); nB.innerHTML = 'Next <i class="fa-solid fa-chevron-right"></i>'; nB.disabled = appState.currentPage === tP;
-            nB.className = `px-5 py-2.5 rounded-xl font-medium flex gap-2 ${appState.currentPage===tP?'bg-slate-50 dark:bg-slate-800 text-slate-300 dark:text-slate-600':'bg-white dark:bg-slate-700 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-600 border border-slate-200 dark:border-slate-600'}`;
-            nB.onclick = () => { appState.currentPage++; renderGallery(); document.getElementById('galleryContainer').scrollIntoView(); };
-            
-            c.appendChild(pB); c.appendChild(i); c.appendChild(nB);
+        function renderPagination(totalItems) {
+            const container = document.getElementById('paginationContainer');
+            const totalPages = Math.ceil(totalItems / ITEMS_PER_PAGE);
+            if (totalPages <= 1) { container.classList.add('hidden'); return; }
+            container.classList.remove('hidden'); container.innerHTML = '';
+
+            const prevBtn = document.createElement('button');
+            prevBtn.className = `px-5 py-2.5 rounded-xl font-medium transition flex items-center gap-2 ${appState.currentPage === 1 ? 'bg-slate-50 dark:bg-slate-800 text-slate-300 dark:text-slate-600 cursor-not-allowed border border-transparent' : 'bg-white dark:bg-slate-700 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-600 border border-slate-200 dark:border-slate-600 shadow-sm'}`;
+            prevBtn.innerHTML = '<i class="fa-solid fa-chevron-left"></i> Prev';
+            prevBtn.disabled = appState.currentPage === 1;
+            prevBtn.onclick = () => changePage(appState.currentPage - 1);
+            container.appendChild(prevBtn);
+
+            const indicator = document.createElement('span');
+            indicator.className = 'px-5 py-2.5 text-sm font-bold text-slate-700 dark:text-slate-200 bg-slate-100 dark:bg-slate-700 rounded-xl border border-slate-200 dark:border-slate-600';
+            indicator.textContent = `${appState.currentPage} / ${totalPages}`;
+            container.appendChild(indicator);
+
+            const nextBtn = document.createElement('button');
+            nextBtn.className = `px-5 py-2.5 rounded-xl font-medium transition flex items-center gap-2 ${appState.currentPage === totalPages ? 'bg-slate-50 dark:bg-slate-800 text-slate-300 dark:text-slate-600 cursor-not-allowed border border-transparent' : 'bg-white dark:bg-slate-700 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-600 border border-slate-200 dark:border-slate-600 shadow-sm'}`;
+            nextBtn.innerHTML = 'Next <i class="fa-solid fa-chevron-right"></i>';
+            nextBtn.disabled = appState.currentPage === totalPages;
+            nextBtn.onclick = () => changePage(appState.currentPage + 1);
+            container.appendChild(nextBtn);
         }
 
-        function toggleSelect(pO, cE) {
-            if (appState.selectedMap.has(pO.id)) { appState.selectedMap.delete(pO.id); delete appState.notes[pO.id]; cE.classList.remove('selected'); } 
-            else { if (appState.kuota && appState.selectedMap.size >= appState.kuota) return showAlert(TRANSLATIONS[appState.lang].alertLimit, 'error'); appState.selectedMap.set(pO.id, pO); cE.classList.add('selected'); }
-            updateActionBar(); saveProgress(); if (appState.viewMode === 'all') updateViewModeText();
+        function changePage(newPage) {
+            const photosToProcess = appState.viewMode === 'selected' ? Array.from(appState.selectedMap.values()) : appState.photos;
+            const totalPages = Math.ceil(photosToProcess.length / ITEMS_PER_PAGE);
+            if (newPage < 1 || newPage > totalPages) return;
+            appState.currentPage = newPage; renderGallery();
+            document.getElementById('galleryContainer').scrollIntoView({ behavior: 'smooth' });
+        }
+
+        function toggleSelect(photoObj, cardElement) {
+            if (appState.selectedMap.has(photoObj.id)) {
+                appState.selectedMap.delete(photoObj.id); 
+                delete appState.notes[photoObj.id]; 
+                cardElement.classList.remove('selected');
+            } else {
+                if (appState.kuota !== null && appState.selectedMap.size >= appState.kuota) {
+                    return showAlert(TRANSLATIONS[appState.lang].alertLimit, 'error');
+                }
+                appState.selectedMap.set(photoObj.id, photoObj); 
+                cardElement.classList.add('selected');
+            }
+            updateActionBar(); saveProgress();
+            if (appState.viewMode === 'all') updateViewModeText();
         }
 
         function updateActionBar() {
-            const cnt = appState.selectedMap.size, bar = document.getElementById('actionBar');
-            document.getElementById('selectedCount').textContent = cnt;
-            if (appState.kuota) {
-                const pc = Math.min((cnt / appState.kuota) * 100, 100), qB = document.getElementById('quotaBar'), qT = document.getElementById('quotaText');
-                qT.textContent = `${cnt} / ${appState.kuota}`; qB.style.width = `${pc}%`;
-                if (pc >= 100) { qB.className = 'bg-green-500 h-2.5 rounded-full transition-all'; qT.className = 'text-sm font-bold text-green-600'; } 
-                else if (pc >= 80) { qB.className = 'bg-yellow-500 h-2.5 rounded-full transition-all'; qT.className = 'text-sm font-bold text-slate-800 dark:text-white'; } 
-                else { qB.className = 'bg-blue-600 h-2.5 rounded-full transition-all'; qT.className = 'text-sm font-bold text-slate-800 dark:text-white'; }
-            }
-            if(document.getElementById('view-selector').classList.contains('flex')) { cnt > 0 ? bar.classList.remove('translate-y-full') : bar.classList.add('translate-y-full'); }
-        }
-
-        function copyListOnly() {
-            if (!appState.selectedMap.size) return;
-            const arr = Array.from(appState.selectedMap.values()), v = CONFIG_APP?.namaVendor || 'Studio';
-            let txt = `LIST FOTO PILIHAN KLIEN\n=======================\nLayanan : ${v}\nKlien   : ${appState.clientName || 'Klien'}\nTotal   : ${arr.length} Foto\n=======================\n\n`;
-            arr.forEach((p, i) => { txt += `${i + 1}. ${p.name}\n`; if (appState.notes[p.id]) txt += `   Catatan: ${appState.notes[p.id]}\n`; });
+            const count = appState.selectedMap.size;
+            const bar = document.getElementById('actionBar');
+            document.getElementById('selectedCount').textContent = count;
             
-            const ta = document.createElement("textarea"); ta.value = txt; ta.style.position = "fixed"; document.body.appendChild(ta); ta.focus(); ta.select();
-            try { if (document.execCommand('copy')) showAlert(TRANSLATIONS[appState.lang].alertCopy, 'success'); } catch(e){} document.body.removeChild(ta);
+            if (appState.kuota !== null) {
+                const percentage = Math.min((count / appState.kuota) * 100, 100);
+                const quotaBar = document.getElementById('quotaBar');
+                
+                document.getElementById('quotaText').textContent = `${count} / ${appState.kuota}`;
+                quotaBar.style.width = `${percentage}%`;
+                
+                if (percentage >= 100) {
+                    quotaBar.classList.replace('bg-blue-600', 'bg-green-500'); quotaBar.classList.replace('bg-yellow-500', 'bg-green-500');
+                    document.getElementById('quotaText').classList.add('text-green-600'); document.getElementById('quotaText').classList.remove('dark:text-white');
+                } else if (percentage >= 80) {
+                    quotaBar.classList.replace('bg-blue-600', 'bg-yellow-500'); quotaBar.classList.replace('bg-green-500', 'bg-yellow-500');
+                    document.getElementById('quotaText').classList.remove('text-green-600'); document.getElementById('quotaText').classList.add('dark:text-white');
+                } else {
+                    quotaBar.classList.replace('bg-green-500', 'bg-blue-600'); quotaBar.classList.replace('bg-yellow-500', 'bg-blue-600');
+                    document.getElementById('quotaText').classList.remove('text-green-600'); document.getElementById('quotaText').classList.add('dark:text-white');
+                }
+            }
+            if (count > 0) { bar.classList.remove('translate-y-full'); } else { bar.classList.add('translate-y-full'); }
         }
 
         function downloadList() {
-            if (!appState.selectedMap.size) return;
-            const arr = Array.from(appState.selectedMap.values()), v = CONFIG_APP?.namaVendor || 'Studio';
-            let txt = `LIST FOTO PILIHAN KLIEN\n=======================\nLayanan : ${v}\nKlien   : ${appState.clientName || 'Klien'}\nTotal   : ${arr.length} Foto\n=======================\n\n`;
-            arr.forEach((p, i) => { txt += `${i + 1}. ${p.name}\n`; if (appState.notes[p.id]) txt += `   Catatan: ${appState.notes[p.id]}\n`; });
-            const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([txt], { type: 'text/plain' }));
-            a.download = `List_Pilihan_${(appState.clientName || 'klien').replace(/\s+/g, '_')}.txt`; document.body.appendChild(a); a.click(); document.body.removeChild(a);
+            if (appState.selectedMap.size === 0) return;
+            const selectedPhotos = Array.from(appState.selectedMap.values());
+            const vendor = (typeof CONFIG_APP !== 'undefined' && CONFIG_APP.namaVendor) ? CONFIG_APP.namaVendor : 'Studio';
+            
+            let textContent = `LIST FOTO PILIHAN KLIEN\n=======================\nLayanan : ${vendor}\nKlien   : ${appState.clientName || 'Klien'}\nTotal   : ${selectedPhotos.length} Foto\n=======================\n\n`;
+            
+            selectedPhotos.forEach((p, index) => {
+                const note = appState.notes[p.id];
+                textContent += `${index + 1}. ${p.name}\n`;
+                if (note) textContent += `   Catatan: ${note}\n`;
+            });
+            
+            textContent += `\n=======================\nDicetak otomatis melalui ${vendor} Portal\n`;
+
+            const blob = new Blob([textContent], { type: 'text/plain' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a'); a.href = url;
+            const safeName = appState.clientName ? appState.clientName.replace(/\s+/g, '_') : 'klien';
+            a.download = `List_Pilihan_${safeName}.txt`;
+            document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url);
         }
 
-        function sendToWhatsApp() {
-            if (!appState.selectedMap.size) return;
-            const arr = Array.from(appState.selectedMap.values()), v = CONFIG_APP?.namaVendor || 'Studio', wa = CONFIG_APP?.whatsappAdmin || '';
-            let txt = `*List Foto Pilihan Client*\nLayanan: ${v}\nKlien: *${appState.clientName}*\nTotal: ${arr.length} Foto\n\n`;
-            arr.forEach((p, i) => { txt += `${i + 1}. ${p.name}\n`; if (appState.notes[p.id]) txt += `   _Catatan: ${appState.notes[p.id]}_\n`; });
+        function copyToClipboard() {
+            if (appState.selectedMap.size === 0) return;
+            const selectedPhotos = Array.from(appState.selectedMap.values());
+            const vendor = (typeof CONFIG_APP !== 'undefined' && CONFIG_APP.namaVendor) ? CONFIG_APP.namaVendor : 'Studio';
+            const waNumber = (typeof CONFIG_APP !== 'undefined' && CONFIG_APP.whatsappAdmin) ? CONFIG_APP.whatsappAdmin : '';
             
-            if (wa) { 
-                window.open(`https://wa.me/${wa}?text=${encodeURIComponent(txt)}`, '_blank'); 
+            let textToCopy = `*List Foto Pilihan Client*\nLayanan: ${vendor}\nKlien: *${appState.clientName}*\nTotal: ${selectedPhotos.length} Foto\n\n`;
+            selectedPhotos.forEach((p, index) => {
+                const note = appState.notes[p.id];
+                textToCopy += `${index + 1}. ${p.name}\n`;
+                if (note) textToCopy += `   _Catatan: ${note}_\n`;
+            });
+            textToCopy += `\n_Dikirim dari ${vendor} Portal_`;
+
+            if (waNumber) {
+                const encodedText = encodeURIComponent(textToCopy);
+                window.open(`https://wa.me/${waNumber}?text=${encodedText}`, '_blank');
             } else {
-                copyListOnly();
+                const textArea = document.createElement("textarea");
+                textArea.value = textToCopy; textArea.style.position = "fixed"; textArea.style.top = "-9999px"; textArea.style.left = "-9999px";
+                document.body.appendChild(textArea); textArea.focus(); textArea.select();
+                try {
+                    if (document.execCommand('copy')) showAlert(TRANSLATIONS[appState.lang].alertCopy, 'success');
+                } catch (err) { showAlert('Error copying text.', 'error'); }
+                document.body.removeChild(textArea);
             }
         }
 
-        function openLightbox(i) {
-            const lb = document.getElementById('lightbox'), img = document.getElementById('lightboxImg'), pList = appState.viewMode === 'selected' ? Array.from(appState.selectedMap.values()) : appState.photos;
-            currentZoomIndex = i; currentZoomPhoto = pList[i];
-            document.getElementById('lightboxTitle').textContent = `${currentZoomPhoto.name} (${i + 1} of ${pList.length})`;
-            img.src = currentZoomPhoto.fullUrl || currentZoomPhoto.url; updateLightboxSelectBtn();
-            
-            if (lb.classList.contains('hidden')) {
-                img.className = "max-w-full max-h-full object-contain rounded-md shadow-2xl transition-all duration-200 pointer-events-auto opacity-100 scale-100";
-                lb.classList.remove('hidden'); setTimeout(() => lb.classList.replace('opacity-0', 'opacity-100'), 10); document.body.style.overflow = 'hidden';
-            } else {
-                img.classList.replace('opacity-100', 'opacity-0'); img.classList.replace('scale-100', 'scale-95');
-                setTimeout(() => { void img.offsetWidth; img.classList.replace('opacity-0', 'opacity-100'); img.classList.replace('scale-95', 'scale-100'); }, 200);
+        function preloadNeighbors(currentIndex, photosArray) {
+            if (currentIndex < photosArray.length - 1) {
+                const imgNext = new Image();
+                imgNext.src = photosArray[currentIndex + 1].fullUrl || photosArray[currentIndex + 1].url;
             }
-            if(i < pList.length-1) new Image().src = pList[i+1].fullUrl || pList[i+1].url;
-            if(i > 0) new Image().src = pList[i-1].fullUrl || pList[i-1].url;
+            if (currentIndex > 0) {
+                const imgPrev = new Image();
+                imgPrev.src = photosArray[currentIndex - 1].fullUrl || photosArray[currentIndex - 1].url;
+            }
         }
 
-        function closeLightbox() { document.getElementById('lightbox').classList.replace('opacity-100', 'opacity-0'); setTimeout(() => { document.getElementById('lightbox').classList.add('hidden'); currentZoomPhoto = null; document.body.style.overflow = 'auto'; renderGallery(); }, 300); }
-        function nextPhoto(e) { if(e) e.stopPropagation(); if (currentZoomIndex < (appState.viewMode === 'selected' ? appState.selectedMap.size : appState.photos.length) - 1) openLightbox(currentZoomIndex + 1); }
-        function prevPhoto(e) { if(e) e.stopPropagation(); if (currentZoomIndex > 0) openLightbox(currentZoomIndex - 1); }
+        function openLightbox(index) {
+            const lightbox = document.getElementById('lightbox');
+            const imgEl = document.getElementById('lightboxImg');
+            const isCurrentlyOpen = !lightbox.classList.contains('hidden');
+
+            const photosToProcess = appState.viewMode === 'selected' ? Array.from(appState.selectedMap.values()) : appState.photos;
+
+            if (isCurrentlyOpen) {
+                imgEl.classList.remove('opacity-100', 'scale-100');
+                imgEl.classList.add('opacity-0', 'scale-95');
+                
+                setTimeout(() => {
+                    currentZoomIndex = index; 
+                    currentZoomPhoto = photosToProcess[index];
+                    document.getElementById('lightboxTitle').textContent = `${currentZoomPhoto.name} (${index + 1} of ${photosToProcess.length})`;
+                    document.getElementById('lightboxImg').src = currentZoomPhoto.fullUrl || currentZoomPhoto.url;
+                    updateLightboxSelectBtn();
+                    
+                    void imgEl.offsetWidth;
+                    imgEl.classList.remove('opacity-0', 'scale-95'); 
+                    imgEl.classList.add('opacity-100', 'scale-100');
+
+                    preloadNeighbors(currentZoomIndex, photosToProcess);
+                }, 200); 
+
+            } else {
+                currentZoomIndex = index; 
+                currentZoomPhoto = photosToProcess[index];
+                document.getElementById('lightboxTitle').textContent = `${currentZoomPhoto.name} (${index + 1} of ${photosToProcess.length})`;
+                document.getElementById('lightboxImg').src = currentZoomPhoto.fullUrl || currentZoomPhoto.url;
+                updateLightboxSelectBtn();
+                
+                imgEl.classList.remove('opacity-0', 'scale-95');
+                imgEl.classList.add('opacity-100', 'scale-100');
+                
+                lightbox.classList.remove('hidden'); 
+                setTimeout(() => { lightbox.classList.replace('opacity-0', 'opacity-100'); }, 10);
+                document.body.style.overflow = 'hidden';
+
+                preloadNeighbors(currentZoomIndex, photosToProcess);
+            }
+        }
+
+        function closeLightbox() {
+            const lightbox = document.getElementById('lightbox');
+            lightbox.classList.replace('opacity-100', 'opacity-0');
+            setTimeout(() => { 
+                lightbox.classList.add('hidden'); currentZoomPhoto = null; document.body.style.overflow = 'auto'; renderGallery(); 
+            }, 300);
+        }
+
+        function nextPhoto(e) { 
+            if(e) e.stopPropagation(); 
+            const photosToProcess = appState.viewMode === 'selected' ? Array.from(appState.selectedMap.values()) : appState.photos;
+            if (currentZoomIndex < photosToProcess.length - 1) openLightbox(currentZoomIndex + 1); 
+        }
+        function prevPhoto(e) { 
+            if(e) e.stopPropagation(); 
+            if (currentZoomIndex > 0) openLightbox(currentZoomIndex - 1); 
+        }
 
         function toggleLightboxSelect() {
             if (!currentZoomPhoto) return;
-            if (appState.selectedMap.has(currentZoomPhoto.id)) { appState.selectedMap.delete(currentZoomPhoto.id); delete appState.notes[currentZoomPhoto.id]; } 
-            else { if (appState.kuota && appState.selectedMap.size >= appState.kuota) return showAlert(TRANSLATIONS[appState.lang].alertLimit, 'error'); appState.selectedMap.set(currentZoomPhoto.id, currentZoomPhoto); }
-            updateLightboxSelectBtn(); updateActionBar(); saveProgress(); if (appState.viewMode === 'all') updateViewModeText();
-        }
-        function updateLightboxSelectBtn() {
-            const b = document.getElementById('lightboxSelectBtn'), nA = document.getElementById('lightboxNote'), isS = appState.selectedMap.has(currentZoomPhoto.id);
-            if (isS) { b.innerHTML = `<i class="fa-solid fa-check mr-2"></i> <span id="btnSelectText">${TRANSLATIONS[appState.lang].btnSelected}</span>`; b.className = "px-6 py-3 bg-green-600 hover:bg-green-700 text-white font-bold rounded-xl flex items-center justify-center shadow-lg w-full sm:w-auto"; nA.classList.remove('hidden'); nA.value = appState.notes[currentZoomPhoto.id] || ''; } 
-            else { b.innerHTML = `<i class="fa-regular fa-square-check mr-2"></i> <span id="btnSelectText">${TRANSLATIONS[appState.lang].btnSelect}</span>`; b.className = "px-6 py-3 bg-slate-800 hover:bg-slate-700 text-white font-bold rounded-xl border border-slate-600 flex items-center justify-center shadow-lg w-full sm:w-auto"; nA.classList.add('hidden'); }
-        }
-        function saveNote() { if(currentZoomPhoto) { const v = document.getElementById('lightboxNote').value.trim(); if(v) appState.notes[currentZoomPhoto.id] = v; else delete appState.notes[currentZoomPhoto.id]; saveProgress(); } }
-
-        let sourceHandle = null, destHandle = null;
-
-        async function selectSource() {
-            try {
-                sourceHandle = await window.showDirectoryPicker();
-                const p = document.getElementById('sourcePath'); p.classList.remove('hidden'); p.querySelector('span').innerText = sourceHandle.name;
-                const b = document.getElementById('btnSource'); b.classList.replace('bg-slate-50', 'bg-green-50'); b.classList.replace('dark:bg-slate-900', 'dark:bg-green-900/30'); b.classList.replace('text-slate-700', 'text-green-700'); b.classList.replace('dark:text-slate-300', 'dark:text-green-400'); b.classList.replace('border-slate-200', 'border-green-300'); b.classList.replace('dark:border-slate-600', 'dark:border-green-800');
-            } catch (e) {}
-        }
-        async function selectDest() {
-            try {
-                destHandle = await window.showDirectoryPicker({ mode: 'readwrite' });
-                const p = document.getElementById('destPath'); p.classList.remove('hidden'); p.querySelector('span').innerText = destHandle.name;
-                const b = document.getElementById('btnDest'); b.classList.replace('bg-slate-50', 'bg-green-50'); b.classList.replace('dark:bg-slate-900', 'dark:bg-green-900/30'); b.classList.replace('text-slate-700', 'text-green-700'); b.classList.replace('dark:text-slate-300', 'dark:text-green-400'); b.classList.replace('border-slate-200', 'border-green-300'); b.classList.replace('dark:border-slate-600', 'dark:border-green-800');
-            } catch (e) {}
-        }
-        function addLog(msg, type = "info") {
-            const b = document.getElementById('logOutput'), d = document.createElement('div');
-            if (type === "error") { d.className = "text-red-400 font-bold"; d.innerHTML = `<i class="fa-solid fa-xmark mr-1"></i> ${msg}`; } 
-            else if (type === "success") { d.className = "text-green-400"; d.innerHTML = `<i class="fa-solid fa-check mr-1"></i> ${msg}`; } 
-            else if (type === "warning") { d.className = "text-yellow-400"; d.innerHTML = `<i class="fa-solid fa-triangle-exclamation mr-1"></i> ${msg}`; } 
-            else { d.className = "text-slate-300"; d.innerHTML = `<i class="fa-solid fa-angle-right mr-1"></i> ${msg}`; }
-            b.appendChild(d); b.scrollTop = b.scrollHeight;
-        }
-
-        function parseClientList(txt) {
-            let lst = [];
-            txt.split('\n').forEach(l => {
-                l = l.trim();
-                if (l && !l.startsWith('=') && !l.toUpperCase().includes('LAYANAN :') && !l.toUpperCase().includes('KLIEN :') && !l.toUpperCase().includes('TOTAL :') && !l.toUpperCase().includes('CATATAN:') && !l.toUpperCase().includes('DICETAK OTOMATIS')) {
-                    let cN = l.replace(/^\d+\.\s*/, '').trim();
-                    const dI = cN.lastIndexOf('.'); if (dI !== -1) cN = cN.substring(0, dI);
-                    if (cN.trim()) lst.push(cN.trim().toUpperCase());
+            if (appState.selectedMap.has(currentZoomPhoto.id)) {
+                appState.selectedMap.delete(currentZoomPhoto.id); delete appState.notes[currentZoomPhoto.id]; 
+            } else {
+                if (appState.kuota !== null && appState.selectedMap.size >= appState.kuota) {
+                    return showAlert(TRANSLATIONS[appState.lang].alertLimit, 'error');
                 }
-            }); return [...new Set(lst)];
+                appState.selectedMap.set(currentZoomPhoto.id, currentZoomPhoto);
+            }
+            updateLightboxSelectBtn(); updateActionBar(); saveProgress(); 
+            if (appState.viewMode === 'all') updateViewModeText();
         }
 
-        async function searchFilesInDirectory(dH, nFList, cRef, tot) {
-            for await (const entry of dH.values()) {
-                if (entry.kind === 'file') {
-                    let bN = entry.name.trim().toUpperCase(); const dI = bN.lastIndexOf('.'); if(dI !== -1) bN = bN.substring(0, dI).trim();
-                    const idx = nFList.findIndex(t => t === bN);
-                    if (idx !== -1) {
-                        addLog(`Menemukan: ${entry.name}`, "success");
-                        const file = await entry.getFile(); const newH = await destHandle.getFileHandle(entry.name, { create: true });
-                        const w = await newH.createWritable(); await w.write(file); await w.close();
-                        cRef.count++; document.getElementById('progressText').innerText = `${cRef.count} / ${tot} File Tercopy`;
-                        nFList.splice(idx, 1);
-                    }
-                } else if (entry.kind === 'directory') await searchFilesInDirectory(entry, nFList, cRef, tot);
-                if (nFList.length === 0) return;
+        function updateLightboxSelectBtn() {
+            const btn = document.getElementById('lightboxSelectBtn');
+            const noteArea = document.getElementById('lightboxNote');
+            const langData = TRANSLATIONS[appState.lang];
+            const isSelected = appState.selectedMap.has(currentZoomPhoto.id);
+
+            if (isSelected) {
+                btn.innerHTML = `<i class="fa-solid fa-check mr-2"></i> <span id="btnSelectText">${langData.btnSelected}</span>`;
+                btn.className = "px-6 py-3 bg-green-600 hover:bg-green-700 text-white font-bold rounded-xl transition flex items-center justify-center shadow-lg w-full sm:w-auto";
+                noteArea.classList.remove('hidden'); noteArea.value = appState.notes[currentZoomPhoto.id] || '';
+            } else {
+                btn.innerHTML = `<i class="fa-regular fa-square-check mr-2"></i> <span id="btnSelectText">${langData.btnSelect}</span>`;
+                btn.className = "px-6 py-3 bg-slate-800 hover:bg-slate-700 text-white font-bold rounded-xl transition flex items-center justify-center shadow-lg border border-slate-600 w-full sm:w-auto";
+                noteArea.classList.add('hidden');
             }
         }
 
-        async function processFiles() {
-            if (!sourceHandle || !destHandle) return alert("Pilih Folder Sumber dan Tujuan!");
-            let tL = parseClientList(document.getElementById('fileList').value);
-            
-            if (tL.length > 15) { alert("MODE DEMO: Memotong otomatis ke 15 foto pertama."); tL = tL.slice(0, 15); }
-            if (tL.length === 0) return alert("List kosong atau format salah!");
-
-            const b = document.getElementById('processBtn'); b.disabled = true; b.innerHTML = `<i class="fa-solid fa-circle-notch fa-spin mr-2"></i> Sedang Memproses...`; b.className = "w-full py-4 bg-slate-500 text-white font-bold rounded-xl flex items-center justify-center gap-2 mb-6 text-lg";
-            document.getElementById('logOutput').innerHTML = '';
-            addLog(`Memulai sortir ${tL.length} file...`); let cR = { count: 0 }, nF = [...tL];
-
-            try {
-                await searchFilesInDirectory(sourceHandle, nF, cR, tL.length);
-                addLog(`----------------------------------------`); addLog(`PROSES SELESAI! Menyalin ${cR.count} file.`, "success");
-                if (nF.length > 0) { addLog(`Ada ${nF.length} file tidak ditemukan!`, "error"); addLog(`${nF.join(', ')}`, "warning"); }
-            } catch (e) { addLog(`Error: ${e.message}`, "error"); } 
-            finally { 
-                b.disabled = false; b.innerHTML = `<i class="fa-solid fa-bolt mr-2"></i> Mulai Sortir & Copy File (Maks 15 Foto)`; b.className = "w-full py-4 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl flex items-center justify-center gap-2 shadow-lg shadow-blue-600/30 mb-6 text-lg"; 
-            }
+        function saveNote() {
+            if (!currentZoomPhoto) return;
+            const noteText = document.getElementById('lightboxNote').value.trim();
+            if (noteText) appState.notes[currentZoomPhoto.id] = noteText;
+            else delete appState.notes[currentZoomPhoto.id];
+            saveProgress(); 
         }
     </script>
 </body>
