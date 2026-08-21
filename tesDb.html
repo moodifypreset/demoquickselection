@@ -16,10 +16,12 @@
     <div id="status">Memulai pengujian... mohon tunggu.</div>
 
     <script>
-        // 1. Masukkan API Key dan URL Anda langsung di sini
+        // 1. Masukkan API Key JWT Anda
         const supabaseUrl = 'https://ygoawyedjxcxxnhlbtit.supabase.co';
         const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inlnb2F3eWVkanhjeHhuaGxidGl0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODcyNTQ1NDMsImV4cCI6MjEwMjgzMDU0M30.qBH1iyMv_RWMUkgZMVd-YP0mJfp-ATUqfHZU7nzclUc';
-        const supabase = supabase.createClient(supabaseUrl, supabaseKey);
+        
+        // PERBAIKAN: Gunakan variabel 'db' agar tidak error tabrakan nama dengan CDN
+        const db = supabase.createClient(supabaseUrl, supabaseKey);
 
         async function jalankanTes() {
             const statusBox = document.getElementById('status');
@@ -29,7 +31,8 @@
             statusBox.innerHTML = `Mencoba mengetuk pintu database dengan IP: ${ipBohongan}...`;
 
             try {
-                const { error } = await supabase
+                // Memakai 'db' untuk operasi database
+                const { error } = await db
                     .from('demo_tracking')
                     .insert([{ ip_address: ipBohongan }]);
 
@@ -38,7 +41,7 @@
                     statusBox.innerHTML = `<span style="color: red;">❌ GAGAL MASUK!</span><br><br>Pesan Error dari Supabase:<br><code style="background:#fee2e2; padding:10px; display:block; margin-top:10px; color:#991b1b;">${error.message}</code>`;
                 } else {
                     // JIKA BERHASIL
-                    statusBox.innerHTML = `<span style="color: green;">✅ SUKSES BESAR!</span><br><br>Koneksi lancar! Silakan cek Supabase atau halaman admin Anda, data <b>${ipBohongan}</b> pasti sudah masuk.`;
+                    statusBox.innerHTML = `<span style="color: green;">✅ SUKSES BESAR!</span><br><br>Koneksi lancar! Silakan cek Supabase atau halaman admin_demo_stats.html Anda, data <b>${ipBohongan}</b> pasti sudah masuk.`;
                 }
             } catch (err) {
                 statusBox.innerHTML = `<span style="color: red;">❌ TERJADI KESALAHAN SISTEM: ${err.message}</span>`;
