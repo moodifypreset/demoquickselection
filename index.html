@@ -18,28 +18,35 @@
                 const ipData = await ipRes.json();
                 const userIp = ipData.ip;
 
-                // Cek apakah IP sudah terdaftar
+                // PERBAIKAN: Gunakan maybeSingle() agar tidak error saat IP baru pertama kali dicek
                 const { data, error } = await supabase
                     .from('demo_tracking')
                     .select('ip_address')
                     .eq('ip_address', userIp)
-                    .single();
+                    .maybeSingle(); 
+
+                if (error) {
+                    console.error("Error cek IP Supabase:", error);
+                }
 
                 if (data) {
-                    // Jika IP sudah ada, blokir seluruh halaman
                     document.documentElement.innerHTML = `
                         <head><title>Sesi Demo Berakhir</title></head>
                         <body style="display:flex; flex-direction:column; align-items:center; justify-content:center; height:100vh; background:#0f172a; color:white; font-family:sans-serif; text-align:center; padding:20px; margin:0;">
                             <h1 style="font-size:24px; margin-bottom:10px;">⏳ Sesi Demo Anda Telah Berakhir</h1>
-                            <p style="color:#94a3b8; margin-bottom:20px; max-width: 400px; line-height: 1.6;">Terima kasih telah mencoba pengalaman aplikasi ini. Sesuai kebijakan, versi demo hanya dapat diakses <b>satu kali</b> per IP Address (Perangkat/WiFi).</p>
-                            <a href="https://moodifypreset.myscalev.com/coquickselectandsorter" style="background:#2563eb; color:white; padding:12px 24px; border-radius:8px; text-decoration:none; font-weight:bold;">Beli Versi Full Sekarang</a>
+                            <p style="color:#94a3b8; margin-bottom:20px; max-width: 400px; line-height: 1.6;">Terima kasih telah mencoba pengalaman aplikasi ini. Sesuai kebijakan, versi demo hanya dapat digunakan untuk <b>satu kali percobaan</b> per IP/Perangkat.</p>
+                            <a href="https://moodifypreset.myscalev.com/coquickselectandsorter" style="background:#2563eb; color:white; padding:12px 24px; border-radius:8px; text-decoration:none; font-weight:bold; box-shadow: 0 4px 6px rgba(0,0,0,0.3);">Beli Versi Full Sekarang</a>
                         </body>`;
                 } else {
-                    // Jika IP belum ada, catat IP tersebut
-                    await supabase.from('demo_tracking').insert([{ ip_address: userIp }]);
+                    const { error: insertError } = await supabase.from('demo_tracking').insert([{ ip_address: userIp }]);
+                    if (insertError) {
+                        console.error("Gagal menyimpan IP:", insertError);
+                    } else {
+                        console.log("IP Baru berhasil didaftarkan untuk sesi demo.");
+                    }
                 }
             } catch (err) {
-                console.log("Sistem demo berjalan offline/error API.", err); 
+                console.error("Sistem demo error:", err); 
             }
         }
         checkDemoAccess();
@@ -119,7 +126,6 @@
 
             <!-- TOMBOL FITUR & ORDER -->
             <div class="flex items-center gap-2 w-full md:w-auto justify-center md:justify-end flex-wrap">
-                
                 <button onclick="showPremiumPopup()" class="flex items-center justify-center px-3 py-1.5 bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200 rounded-lg text-sm transition shadow-sm border border-slate-200 dark:border-slate-600" title="Generate Link">
                     <i class="fa-solid fa-link text-blue-600 dark:text-blue-400"></i> <span class="hidden lg:inline ml-1 font-bold">Generate Link</span>
                 </button>
@@ -259,7 +265,7 @@
             <i class="fa-solid fa-circle-info mt-0.5 text-blue-600 dark:text-blue-400"></i>
             <div>
                 <strong class="font-bold block mb-1">Informasi Penting Mode Demo:</strong>
-                Gunakan browser <b>Google Chrome</b> atau <b>Microsoft Edge</b>. Aplikasi ini akan mencari dan menyalin foto secara otomatis. <b>Dibatasi maksimal memproses 15 foto</b>. <br>
+                Gunakan browser <b>Google Chrome</b> atau <b>Microsoft Edge</b>. Aplikasi ini akan mencari dan menyalin foto secara otomatis dan <b>dibatasi maksimal memproses 15 foto</b>. <br>
                 <span class="text-red-600 dark:text-red-400 font-bold mt-1 block"><i class="fa-solid fa-triangle-exclamation"></i> Peringatan: Jangan muat ulang (refresh) halaman ini agar sesi uji coba Anda tidak hangus (berlaku 1x per IP).</span>
             </div>
         </div>
@@ -426,65 +432,40 @@
     <!-- LOGIKA JAVASCRIPT GLOBAL & SELECTOR            -->
     <!-- ============================================== -->
     <script>
-        // LOGIKA TAB NAVIGASI (SWITCH APP)
+        // FUNGSI LOCKDOWN AKHIR SESI DEMO
+        function endDemoSession() {
+            showAlert('Sesi demo selesai. Mengunci aplikasi dalam 3 detik...', 'success');
+            setTimeout(() => { window.location.reload(); }, 3500);
+        }
+
         function switchApp(appName) {
-            const viewSelector = document.getElementById('view-selector');
-            const viewSorter = document.getElementById('view-sorter');
-            const tabSelector = document.getElementById('tab-selector');
-            const tabSorter = document.getElementById('tab-sorter');
-            const actionBar = document.getElementById('actionBar');
-            const btnTutorial = document.getElementById('btnTutorial');
+            const viewSelector = document.getElementById('view-selector'), viewSorter = document.getElementById('view-sorter'),
+                  tabSelector = document.getElementById('tab-selector'), tabSorter = document.getElementById('tab-sorter'),
+                  actionBar = document.getElementById('actionBar'), btnTutorial = document.getElementById('btnTutorial');
 
             if (appName === 'selector') {
-                viewSelector.classList.remove('hidden'); viewSelector.classList.add('flex');
-                viewSorter.classList.add('hidden'); viewSorter.classList.remove('flex');
-                
-                tabSelector.classList.replace('text-slate-500', 'text-blue-600');
-                tabSelector.classList.replace('dark:text-slate-400', 'dark:text-blue-400');
-                tabSelector.classList.add('bg-white', 'dark:bg-slate-700', 'shadow-sm');
-                tabSelector.classList.remove('hover:text-slate-700', 'dark:hover:text-slate-200');
-
-                tabSorter.classList.replace('text-blue-600', 'text-slate-500');
-                tabSorter.classList.replace('dark:text-blue-400', 'dark:text-slate-400');
-                tabSorter.classList.remove('bg-white', 'dark:bg-slate-700', 'shadow-sm');
-                tabSorter.classList.add('hover:text-slate-700', 'dark:hover:text-slate-200');
-
+                viewSelector.classList.remove('hidden'); viewSelector.classList.add('flex'); viewSorter.classList.add('hidden'); viewSorter.classList.remove('flex');
+                tabSelector.classList.replace('text-slate-500', 'text-blue-600'); tabSelector.classList.replace('dark:text-slate-400', 'dark:text-blue-400'); tabSelector.classList.add('bg-white', 'dark:bg-slate-700', 'shadow-sm'); tabSelector.classList.remove('hover:text-slate-700', 'dark:hover:text-slate-200');
+                tabSorter.classList.replace('text-blue-600', 'text-slate-500'); tabSorter.classList.replace('dark:text-blue-400', 'dark:text-slate-400'); tabSorter.classList.remove('bg-white', 'dark:bg-slate-700', 'shadow-sm'); tabSorter.classList.add('hover:text-slate-700', 'dark:hover:text-slate-200');
                 btnTutorial.classList.remove('hidden'); btnTutorial.classList.add('flex');
                 if(appState.selectedMap && appState.selectedMap.size > 0) actionBar.classList.remove('translate-y-full');
             } else {
-                viewSelector.classList.add('hidden'); viewSelector.classList.remove('flex');
-                viewSorter.classList.remove('hidden'); viewSorter.classList.add('flex');
-                
-                tabSorter.classList.replace('text-slate-500', 'text-blue-600');
-                tabSorter.classList.replace('dark:text-slate-400', 'dark:text-blue-400');
-                tabSorter.classList.add('bg-white', 'dark:bg-slate-700', 'shadow-sm');
-                tabSorter.classList.remove('hover:text-slate-700', 'dark:hover:text-slate-200');
-
-                tabSelector.classList.replace('text-blue-600', 'text-slate-500');
-                tabSelector.classList.replace('dark:text-blue-400', 'dark:text-slate-400');
-                tabSelector.classList.remove('bg-white', 'dark:bg-slate-700', 'shadow-sm');
-                tabSelector.classList.add('hover:text-slate-700', 'dark:hover:text-slate-200');
-                
-                btnTutorial.classList.add('hidden'); btnTutorial.classList.remove('flex');
-                actionBar.classList.add('translate-y-full');
+                viewSelector.classList.add('hidden'); viewSelector.classList.remove('flex'); viewSorter.classList.remove('hidden'); viewSorter.classList.add('flex');
+                tabSorter.classList.replace('text-slate-500', 'text-blue-600'); tabSorter.classList.replace('dark:text-slate-400', 'dark:text-blue-400'); tabSorter.classList.add('bg-white', 'dark:bg-slate-700', 'shadow-sm'); tabSorter.classList.remove('hover:text-slate-700', 'dark:hover:text-slate-200');
+                tabSelector.classList.replace('text-blue-600', 'text-slate-500'); tabSelector.classList.replace('dark:text-blue-400', 'dark:text-slate-400'); tabSelector.classList.remove('bg-white', 'dark:bg-slate-700', 'shadow-sm'); tabSelector.classList.add('hover:text-slate-700', 'dark:hover:text-slate-200');
+                btnTutorial.classList.add('hidden'); btnTutorial.classList.remove('flex'); actionBar.classList.add('translate-y-full');
             }
         }
 
-        // FUNGSI POPUP PREMIUM
         function showPremiumPopup() {
             const modal = document.getElementById('premiumModal'), content = document.getElementById('premiumContent');
-            modal.classList.remove('hidden'); modal.classList.add('flex');
-            setTimeout(() => { modal.classList.replace('opacity-0', 'opacity-100'); content.classList.replace('scale-95', 'scale-100'); }, 10);
+            modal.classList.remove('hidden'); modal.classList.add('flex'); setTimeout(() => { modal.classList.replace('opacity-0', 'opacity-100'); content.classList.replace('scale-95', 'scale-100'); }, 10);
         }
         function closePremiumPopup() {
             const modal = document.getElementById('premiumModal'), content = document.getElementById('premiumContent');
-            modal.classList.replace('opacity-100', 'opacity-0'); content.classList.replace('scale-100', 'scale-95');
-            setTimeout(() => { modal.classList.remove('flex'); modal.classList.add('hidden'); }, 300);
+            modal.classList.replace('opacity-100', 'opacity-0'); content.classList.replace('scale-100', 'scale-95'); setTimeout(() => { modal.classList.remove('flex'); modal.classList.add('hidden'); }, 300);
         }
 
-        // ==========================================
-        // LOGIKA CLIENT PORTAL (SELECTOR)
-        // ==========================================
         const ITEMS_PER_PAGE = 200; 
         let appState = { 
             rootFolderId: null, folderId: null, clientName: '', 
@@ -555,16 +536,11 @@
 
         document.addEventListener("DOMContentLoaded", () => {
             updateDarkModeIcon(document.documentElement.classList.contains('dark'));
-            if (typeof CONFIG_APP !== 'undefined') {
-                document.getElementById('footerVendorName').textContent = CONFIG_APP.namaVendor || 'Studio Foto';
-            }
+            if (typeof CONFIG_APP !== 'undefined') { document.getElementById('footerVendorName').textContent = CONFIG_APP.namaVendor || 'Studio Foto'; }
 
-            // FORCED DEMO QUOTA (Batas Seleksi = 15)
             appState.kuota = 15;
-            document.getElementById('quotaContainer').classList.remove('hidden'); 
-            document.getElementById('quotaContainer').classList.add('block');
-            document.getElementById('greetingQuotaInfo').classList.remove('hidden'); 
-            document.getElementById('greetingQuotaInfo').classList.add('flex');
+            document.getElementById('quotaContainer').classList.remove('hidden'); document.getElementById('quotaContainer').classList.add('block');
+            document.getElementById('greetingQuotaInfo').classList.remove('hidden'); document.getElementById('greetingQuotaInfo').classList.add('flex');
             document.getElementById('greetingQuotaLimit').textContent = appState.kuota;
 
             const urlParams = new URLSearchParams(window.location.search);
@@ -573,7 +549,6 @@
                 document.getElementById('displayClientName').textContent = appState.clientName;
                 document.getElementById('greetingSection').classList.remove('hidden');
             }
-
             if (urlParams.get('i')) {
                 document.getElementById('driveLink').value = `https://drive.google.com/drive/folders/${urlParams.get('i')}`;
                 document.getElementById('inputSection').classList.add('hidden');
@@ -665,19 +640,13 @@
                     appState.folders = fetched.filter(f => f.mimeType === 'application/vnd.google-apps.folder');
                     let pFiles = fetched.filter(f => f.mimeType !== 'application/vnd.google-apps.folder' && f.thumbnailLink);
                     
-                    // PERBAIKAN LOGIKA RANDOM:
-                    // Simpan seluruh data foto ke dalam memori aplikasi (originalPhotos)
                     appState.originalPhotos = pFiles.map(f => ({ 
                         id: f.id, name: f.name, folderName: displayTitle, 
-                        url: f.thumbnailLink?.replace('=s220', '=s500'), 
-                        fullUrl: f.thumbnailLink?.replace('=s220', '=s1600') 
+                        url: f.thumbnailLink?.replace('=s220', '=s500'), fullUrl: f.thumbnailLink?.replace('=s220', '=s1600') 
                     }));
-
-                    // TAPI yang ditampilkan ke UI (photos) dibatasi maksimal 30 secara default
                     appState.photos = appState.originalPhotos.slice(0, 30);
                     
                     renderFolders(); document.getElementById('sortDropdown').value = 'random'; applySort('random');
-                    
                     if (!overrideId) setTimeout(() => { showTutorial(false); }, 800); else if(hasSeenTutorial) setTimeout(triggerTooltipsAnimation, 500);
                 } else { showAlert('Folder kosong/bukan Publik.', 'error'); document.getElementById('loadingState').classList.add('hidden'); }
             } catch (e) { showAlert('Gagal terhubung ke Drive.', 'error'); document.getElementById('loadingState').classList.add('hidden'); }
@@ -703,26 +672,10 @@
             if (order === 'random') { btnR.classList.remove('hidden'); document.getElementById('sortDropdown').value = 'random'; } 
             else { btnR.classList.add('hidden'); hideTooltip('reshuffleTooltip'); }
 
-            // PENGATURAN LIMIT 30 FOTO UNTUK SETIAP SORTING
-            if (order === 'default') {
-                appState.photos = appState.originalPhotos.slice(0, 30);
-            }
-            else if (order === 'asc') {
-                let sorted = [...appState.originalPhotos].sort((a, b) => a.name.localeCompare(b.name, undefined, {numeric: true}));
-                appState.photos = sorted.slice(0, 30);
-            }
-            else if (order === 'desc') {
-                let sorted = [...appState.originalPhotos].sort((a, b) => b.name.localeCompare(a.name, undefined, {numeric: true}));
-                appState.photos = sorted.slice(0, 30);
-            }
-            else if (order === 'random') { 
-                let arr = [...appState.originalPhotos]; 
-                for (let i = arr.length - 1; i > 0; i--) { 
-                    const j = Math.floor(Math.random() * (i + 1)); 
-                    [arr[i], arr[j]] = [arr[j], arr[i]]; 
-                } 
-                appState.photos = arr.slice(0, 30); 
-            }
+            if (order === 'default') { appState.photos = appState.originalPhotos.slice(0, 30); }
+            else if (order === 'asc') { let sorted = [...appState.originalPhotos].sort((a, b) => a.name.localeCompare(b.name, undefined, {numeric: true})); appState.photos = sorted.slice(0, 30); }
+            else if (order === 'desc') { let sorted = [...appState.originalPhotos].sort((a, b) => b.name.localeCompare(a.name, undefined, {numeric: true})); appState.photos = sorted.slice(0, 30); }
+            else if (order === 'random') { let arr = [...appState.originalPhotos]; for (let i = arr.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [arr[i], arr[j]] = [arr[j], arr[i]]; } appState.photos = arr.slice(0, 30); }
             
             appState.currentPage = 1; renderGallery();
             if(order === 'random') { const i = btnR.querySelector('i'); i.classList.add('fa-spin'); setTimeout(() => i.classList.remove('fa-spin'), 500); }
@@ -815,9 +768,7 @@
                 else if (pc >= 80) { qB.className = 'bg-yellow-500 h-2.5 rounded-full transition-all'; qT.className = 'text-sm font-bold text-slate-800 dark:text-white'; } 
                 else { qB.className = 'bg-blue-600 h-2.5 rounded-full transition-all'; qT.className = 'text-sm font-bold text-slate-800 dark:text-white'; }
             }
-            if(document.getElementById('view-selector').classList.contains('flex')) {
-                cnt > 0 ? bar.classList.remove('translate-y-full') : bar.classList.add('translate-y-full');
-            }
+            if(document.getElementById('view-selector').classList.contains('flex')) { cnt > 0 ? bar.classList.remove('translate-y-full') : bar.classList.add('translate-y-full'); }
         }
 
         function downloadList() {
@@ -827,6 +778,8 @@
             arr.forEach((p, i) => { txt += `${i + 1}. ${p.name}\n`; if (appState.notes[p.id]) txt += `   Catatan: ${appState.notes[p.id]}\n`; });
             const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([txt], { type: 'text/plain' }));
             a.download = `List_Pilihan_${(appState.clientName || 'klien').replace(/\s+/g, '_')}.txt`; document.body.appendChild(a); a.click(); document.body.removeChild(a);
+            
+            endDemoSession();
         }
 
         function copyToClipboard() {
@@ -834,10 +787,11 @@
             const arr = Array.from(appState.selectedMap.values()), v = CONFIG_APP?.namaVendor || 'Studio', wa = CONFIG_APP?.whatsappAdmin || '';
             let txt = `*List Foto Pilihan Client*\nLayanan: ${v}\nKlien: *${appState.clientName}*\nTotal: ${arr.length} Foto\n\n`;
             arr.forEach((p, i) => { txt += `${i + 1}. ${p.name}\n`; if (appState.notes[p.id]) txt += `   _Catatan: ${appState.notes[p.id]}_\n`; });
-            if (wa) window.open(`https://wa.me/${wa}?text=${encodeURIComponent(txt)}`, '_blank');
+            if (wa) { window.open(`https://wa.me/${wa}?text=${encodeURIComponent(txt)}`, '_blank'); endDemoSession(); }
             else {
                 const ta = document.createElement("textarea"); ta.value = txt; ta.style.position = "fixed"; document.body.appendChild(ta); ta.focus(); ta.select();
                 try { if (document.execCommand('copy')) showAlert(TRANSLATIONS[appState.lang].alertCopy); } catch(e){} document.body.removeChild(ta);
+                endDemoSession();
             }
         }
 
@@ -936,7 +890,6 @@
             if (!sourceHandle || !destHandle) return alert("Pilih Folder Sumber dan Tujuan!");
             let tL = parseClientList(document.getElementById('fileList').value);
             
-            // DEMO MODE LIMIT
             if (tL.length > 15) { alert("MODE DEMO: Memotong otomatis ke 15 foto pertama."); tL = tL.slice(0, 15); }
             if (tL.length === 0) return alert("List kosong atau format salah!");
 
@@ -949,7 +902,10 @@
                 addLog(`----------------------------------------`); addLog(`PROSES SELESAI! Menyalin ${cR.count} file.`, "success");
                 if (nF.length > 0) { addLog(`Ada ${nF.length} file tidak ditemukan!`, "error"); addLog(`${nF.join(', ')}`, "warning"); }
             } catch (e) { addLog(`Error: ${e.message}`, "error"); } 
-            finally { b.disabled = false; b.innerHTML = `<i class="fa-solid fa-bolt mr-2"></i> Mulai Sortir & Copy File (Maks 15 Foto)`; b.className = "w-full py-4 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl flex items-center justify-center gap-2 shadow-lg shadow-blue-600/30 mb-6 text-lg"; }
+            finally { 
+                b.disabled = false; b.innerHTML = `<i class="fa-solid fa-bolt mr-2"></i> Mulai Sortir & Copy File (Maks 15 Foto)`; b.className = "w-full py-4 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl flex items-center justify-center gap-2 shadow-lg shadow-blue-600/30 mb-6 text-lg"; 
+                endDemoSession();
+            }
         }
     </script>
 </body>
