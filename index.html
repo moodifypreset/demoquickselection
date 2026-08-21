@@ -15,6 +15,19 @@
         let demoTimerInterval;
         let userIpGlobal = null;
 
+        // FUNGSI BARU: MELAPORKAN STATUS ONLINE KE DASHBOARD ADMIN
+        function laporStatusOnline() {
+            const room = db.channel('online_visitors');
+            const idPengunjung = 'visitor-' + Math.random().toString(36).substr(2, 9);
+            
+            room.subscribe(async (status) => {
+                if (status === 'SUBSCRIBED') {
+                    // Kirim sinyal bahwa orang ini sedang aktif
+                    await room.track({ id: idPengunjung, online_at: new Date().toISOString() });
+                }
+            });
+        }
+
         // Fungsi Kunci UI Seketika
         function lockAppDemo() {
             if (demoTimerInterval) clearInterval(demoTimerInterval);
@@ -66,26 +79,27 @@
 
             function updateTimer() {
                 const currentTime = Date.now();
-                // Hitung sisa waktu (jangan biarkan minus)
                 const timeLeft = Math.max(0, Math.floor((endTime - currentTime) / 1000));
 
                 let m = Math.floor(timeLeft / 60).toString().padStart(2, '0');
                 let s = (timeLeft % 60).toString().padStart(2, '0');
                 timerDisplay.innerText = `${m}:${s}`;
 
-                // Jika waktu habis (00:00)
                 if (timeLeft <= 0) {
                     clearInterval(demoTimerInterval);
-                    burnDemoAndLock(); // PANGGIL FUNGSI KUNCI & INPUT IP
+                    burnDemoAndLock(); 
                 }
             }
 
-            updateTimer(); // Panggil sekali di awal
+            updateTimer(); 
             demoTimerInterval = setInterval(updateTimer, 1000);
         }
 
         // Fungsi Pelacakan Utama
         async function initDemoTracking() {
+            // Lapor status online terlebih dahulu
+            laporStatusOnline();
+
             try {
                 // Dapatkan IP
                 const ipRes = await fetch('https://api.ipify.org?format=json');
@@ -100,15 +114,13 @@
                     .maybeSingle(); 
 
                 if (data) {
-                    // IP sudah terdaftar di database -> Langsung Kunci
                     lockAppDemo();
                 } else {
-                    // IP BELUM terdaftar -> Bebaskan masuk dan jalankan Timer 7 Menit
                     startOrResumeTimer();
                 }
             } catch (err) {
                 console.error("Gagal inisiasi IP:", err); 
-                startOrResumeTimer(); // Fallback jika gagal cek IP
+                startOrResumeTimer(); 
             }
         }
         
@@ -851,7 +863,7 @@
         }
 
         // ==========================================
-        // FUNGSI COPY / DOWNLOAD (TIDAK LAGI MENGUNCI)
+        // FUNGSI COPY / DOWNLOAD (BEBAS BERKALI-KALI)
         // ==========================================
         function copyListOnly() {
             if (!appState.selectedMap.size) return;
@@ -920,7 +932,7 @@
         function saveNote() { if(currentZoomPhoto) { const v = document.getElementById('lightboxNote').value.trim(); if(v) appState.notes[currentZoomPhoto.id] = v; else delete appState.notes[currentZoomPhoto.id]; saveProgress(); } }
 
         // ==========================================
-        // LOGIKA AUTO RAW SORTER (TIDAK MENGUNCI)
+        // LOGIKA AUTO RAW SORTER (BEBAS BERKALI-KALI)
         // ==========================================
         let sourceHandle = null, destHandle = null;
 
