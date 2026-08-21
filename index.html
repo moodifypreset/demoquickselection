@@ -1000,81 +1000,140 @@
         function saveNote() { if(currentZoomPhoto) { const v = document.getElementById('lightboxNote').value.trim(); if(v) appState.notes[currentZoomPhoto.id] = v; else delete appState.notes[currentZoomPhoto.id]; saveProgress(); } }
 
         // ==========================================
-        // LOGIKA AUTO RAW SORTER
+        // PERBAIKAN LOGIKA LOAD FROM DRIVE (ANTI-STUCK KETAT)
         // ==========================================
-        let sourceHandle = null, destHandle = null;
+        let isFetchingDrive = false;
 
-        async function selectSource() {
-            try {
-                sourceHandle = await window.showDirectoryPicker();
-                const p = document.getElementById('sourcePath'); p.classList.remove('hidden'); p.querySelector('span').innerText = sourceHandle.name;
-                const b = document.getElementById('btnSource'); b.classList.replace('bg-slate-50', 'bg-green-50'); b.classList.replace('dark:bg-slate-900', 'dark:bg-green-900/30'); b.classList.replace('text-slate-700', 'text-green-700'); b.classList.replace('dark:text-slate-300', 'dark:text-green-400'); b.classList.replace('border-slate-200', 'border-green-300'); b.classList.replace('dark:border-slate-600', 'dark:border-green-800');
-            } catch (e) {}
-        }
-        async function selectDest() {
-            try {
-                destHandle = await window.showDirectoryPicker({ mode: 'readwrite' });
-                const p = document.getElementById('destPath'); p.classList.remove('hidden'); p.querySelector('span').innerText = destHandle.name;
-                const b = document.getElementById('btnDest'); b.classList.replace('bg-slate-50', 'bg-green-50'); b.classList.replace('dark:bg-slate-900', 'dark:bg-green-900/30'); b.classList.replace('text-slate-700', 'text-green-700'); b.classList.replace('dark:text-slate-300', 'dark:text-green-400'); b.classList.replace('border-slate-200', 'border-green-300'); b.classList.replace('dark:border-slate-600', 'dark:border-green-800');
-            } catch (e) {}
-        }
-        function addLog(msg, type = "info") {
-            const b = document.getElementById('logOutput'), d = document.createElement('div');
-            if (type === "error") { d.className = "text-red-400 font-bold"; d.innerHTML = `<i class="fa-solid fa-xmark mr-1"></i> ${msg}`; } 
-            else if (type === "success") { d.className = "text-green-400"; d.innerHTML = `<i class="fa-solid fa-check mr-1"></i> ${msg}`; } 
-            else if (type === "warning") { d.className = "text-yellow-400"; d.innerHTML = `<i class="fa-solid fa-triangle-exclamation mr-1"></i> ${msg}`; } 
-            else { d.className = "text-slate-300"; d.innerHTML = `<i class="fa-solid fa-angle-right mr-1"></i> ${msg}`; }
-            b.appendChild(d); b.scrollTop = b.scrollHeight;
-        }
+        async function loadFromDrive(overrideId = null, folderName = null, isNavBack = false) {
+            // Mencegah klik bertubi-tubi yang bisa merusak UI
+            if (isFetchingDrive) return;
+            isFetchingDrive = true;
 
-        function parseClientList(txt) {
-            let lst = [];
-            txt.split('\n').forEach(l => {
-                l = l.trim();
-                if (l && !l.startsWith('=') && !l.toUpperCase().includes('LAYANAN :') && !l.toUpperCase().includes('KLIEN :') && !l.toUpperCase().includes('TOTAL :') && !l.toUpperCase().includes('CATATAN:') && !l.toUpperCase().includes('DICETAK OTOMATIS')) {
-                    let cN = l.replace(/^\d+\.\s*/, '').trim();
-                    const dI = cN.lastIndexOf('.'); if (dI !== -1) cN = cN.substring(0, dI);
-                    if (cN.trim()) lst.push(cN.trim().toUpperCase());
+            let targetId = overrideId;
+            let previousFolderId = appState.folderId; // Amankan state folder saat ini
+
+            try {
+                if (typeof CONFIG_APP === 'undefined' || !CONFIG_APP.googleApiKey) {
+                    throw new Error("Sistem (API Key) belum dikonfigurasi.");
                 }
-            }); return [...new Set(lst)];
-        }
 
-        async function searchFilesInDirectory(dH, nFList, cRef, tot) {
-            for await (const entry of dH.values()) {
-                if (entry.kind === 'file') {
-                    let bN = entry.name.trim().toUpperCase(); const dI = bN.lastIndexOf('.'); if(dI !== -1) bN = bN.substring(0, dI).trim();
-                    const idx = nFList.findIndex(t => t === bN);
-                    if (idx !== -1) {
-                        addLog(`Menemukan: ${entry.name}`, "success");
-                        const file = await entry.getFile(); const newH = await destHandle.getFileHandle(entry.name, { create: true });
-                        const w = await newH.createWritable(); await w.write(file); await w.close();
-                        cRef.count++; document.getElementById('progressText').innerText = `${cRef.count} / ${tot} File Tercopy`;
-                        nFList.splice(idx, 1);
+                if (!targetId) {
+                    const rawLink = document.getElementById('driveLink').value.trim();
+                    targetId = extractFolderId(rawLink) || rawLink;
+                    if (!targetId) throw new Error("Link Google Drive tidak valid/kosong.");
+                }
+
+                // Sembunyikan Galeri & Tampilkan Loading
+                document.getElementById('inputSection').classList.add('hidden');
+                document.getElementById('galleryContainer').classList.add('hidden');
+                document.getElementById('loadingState').classList.remove('hidden'); 
+                document.getElementById('loadingState').classList.add('flex');
+
+                let fetched = []; 
+                let token = ""; 
+                const q = encodeURIComponent(`'${targetId}' in parents and trashed=false`);
+                
+                do {
+                    // API Call Standar yang paling stabil
+                    let url = `https://www.googleapis.com/drive/v3/files?q=${q}&fields=nextPageToken,files(id,name,mimeType,thumbnailLink)&key=${CONFIG_APP.googleApiKey}&pageSize=1000`;
+                    if (token) url += `&pageToken=${token}`;
+                    
+                    const res = await fetch(url); 
+                    const data = await res.json();
+                    
+                    if (!res.ok) {
+                        throw new Error(data.error?.message || "Akses ditolak. Pastikan hak akses folder adalah Publik.");
                     }
-                } else if (entry.kind === 'directory') await searchFilesInDirectory(entry, nFList, cRef, tot);
-                if (nFList.length === 0) return;
+
+                    if (data.files) fetched = fetched.concat(data.files); 
+                    token = data.nextPageToken;
+                } while (token);
+
+                // ========================================================
+                // FETCH SUKSES! BARU KITA UPDATE STATE & HISTORY APLIKASI
+                // ========================================================
+                
+                if (!overrideId) {
+                    // 1. Masuk dari Form Link Awal
+                    appState.rootFolderId = targetId; 
+                    appState.folderHistory = []; 
+                    loadProgress(appState.rootFolderId); 
+                } else if (!isNavBack) {
+                    // 2. Masuk ke dalam Sub-Folder (Maju)
+                    let currentNameDisplay = document.getElementById('currentFolderDisplay').innerText.trim();
+                    appState.folderHistory.push({ 
+                        id: previousFolderId, 
+                        name: appState.folderHistory.length === 0 ? "Galeri Utama" : currentNameDisplay
+                    });
+                } else {
+                    // 3. Tombol KEMBALI ditekan dan berhasil! Baru kita buang history-nya
+                    appState.folderHistory.pop();
+                }
+
+                appState.folderId = targetId; 
+                appState.currentPage = 1; 
+                appState.viewMode = 'all';
+                
+                const displayTitle = (targetId === appState.rootFolderId) ? TRANSLATIONS[appState.lang].galleryTitle : folderName;
+                document.getElementById('currentFolderDisplay').innerHTML = (targetId === appState.rootFolderId) ? displayTitle : `<i class="fa-solid fa-folder-open text-blue-500 mr-2"></i> ${displayTitle}`;
+
+                appState.folders = fetched.filter(f => f.mimeType === 'application/vnd.google-apps.folder');
+                let pFiles = fetched.filter(f => f.mimeType !== 'application/vnd.google-apps.folder' && f.thumbnailLink);
+                
+                appState.originalPhotos = pFiles.map(f => ({ 
+                    id: f.id, name: f.name, folderName: displayTitle, 
+                    url: f.thumbnailLink?.replace('=s220', '=s500'), fullUrl: f.thumbnailLink?.replace('=s220', '=s1600') 
+                }));
+                appState.photos = appState.originalPhotos.slice(0, 30); // Batas 30 Foto Demo
+                
+                renderFolders(); 
+                document.getElementById('sortDropdown').value = 'random'; 
+                applySort('random'); // Menampilkan UI Foto
+                
+                if (!overrideId) setTimeout(() => { showTutorial(false); }, 800); 
+                else if(hasSeenTutorial) setTimeout(triggerTooltipsAnimation, 500);
+
+            } catch (e) { 
+                console.error("Fetch Drive Error:", e);
+                showAlert(`Gagal: ${e.message}`, 'error'); 
+                
+                // === PENGAMANAN UI JIKA ERROR (KEMBALIKAN SEPERTI SEMULA) ===
+                document.getElementById('loadingState').classList.add('hidden'); 
+                document.getElementById('loadingState').classList.remove('flex');
+                
+                if (!previousFolderId || previousFolderId === appState.rootFolderId && appState.photos.length === 0) {
+                    // Kembali ke layar input awal
+                    document.getElementById('inputSection').classList.remove('hidden');
+                } else {
+                    // Kembali memunculkan galeri foto yang tadi sedang dilihat
+                    document.getElementById('galleryContainer').classList.remove('hidden');
+                }
+            } finally {
+                // Selalu buka gembok klik dalam kondisi sukses/gagal
+                isFetchingDrive = false;
             }
         }
 
-        async function processFiles() {
-            if (!sourceHandle || !destHandle) return alert("Pilih Folder Sumber dan Tujuan!");
-            let tL = parseClientList(document.getElementById('fileList').value);
-            
-            if (tL.length > 15) { alert("MODE DEMO: Memotong otomatis ke 15 foto pertama."); tL = tL.slice(0, 15); }
-            if (tL.length === 0) return alert("List kosong atau format salah!");
+        function renderFolders() {
+            const c = document.getElementById('folderNavContainer'), g = document.getElementById('folderGrid'), b = document.getElementById('btnBackFolder');
+            g.innerHTML = ''; b.classList.toggle('hidden', appState.folderHistory.length === 0);
+            if (appState.folders.length === 0 && appState.folderHistory.length === 0) { c.classList.add('hidden'); return; }
+            c.classList.remove('hidden');
+            appState.folders.forEach(f => {
+                const btn = document.createElement('button');
+                btn.className = "flex items-center gap-3 p-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-600 rounded-xl hover:border-blue-50 hover:shadow-md transition text-left group";
+                btn.innerHTML = `<i class="fa-solid fa-folder text-yellow-400 group-hover:text-blue-500 text-2xl"></i> <span class="font-bold text-xs md:text-sm text-slate-700 dark:text-slate-200 w-full truncate">${f.name}</span>`;
+                btn.onclick = () => loadFromDrive(f.id, f.name, false); g.appendChild(btn);
+            });
+            if(appState.folders.length === 0) g.innerHTML = `<p class="text-xs text-slate-500 col-span-full">Tidak ada sub-folder lagi.</p>`;
+        }
 
-            const b = document.getElementById('processBtn'); b.disabled = true; b.innerHTML = `<i class="fa-solid fa-circle-notch fa-spin mr-2"></i> Sedang Memproses...`; b.className = "w-full py-4 bg-slate-500 text-white font-bold rounded-xl flex items-center justify-center gap-2 mb-6 text-lg";
-            document.getElementById('logOutput').innerHTML = '';
-            addLog(`Memulai sortir ${tL.length} file...`); let cR = { count: 0 }, nF = [...tL];
-
-            try {
-                await searchFilesInDirectory(sourceHandle, nF, cR, tL.length);
-                addLog(`----------------------------------------`); addLog(`PROSES SELESAI! Menyalin ${cR.count} file.`, "success");
-                if (nF.length > 0) { addLog(`Ada ${nF.length} file tidak ditemukan!`, "error"); addLog(`${nF.join(', ')}`, "warning"); }
-            } catch (e) { addLog(`Error: ${e.message}`, "error"); } 
-            finally { 
-                b.disabled = false; b.innerHTML = `<i class="fa-solid fa-bolt mr-2"></i> Mulai Sortir & Copy File (Maks 15 Foto)`; b.className = "w-full py-4 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl flex items-center justify-center gap-2 shadow-lg shadow-blue-600/30 mb-6 text-lg"; 
-            }
+        function navigateBackFolder() { 
+            if (appState.folderHistory.length) { 
+                // PERBAIKAN: Baca data terakhir (JANGAN dihapus dari history dulu!)
+                const p = appState.folderHistory[appState.folderHistory.length - 1]; 
+                loadFromDrive(p.id, p.name, true); 
+            } 
         }
     </script>
 </body>
