@@ -11,7 +11,6 @@
     <!-- 2. SCRIPT PELACAKAN IP & SUPABASE UNTUK DEMO -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script>
-        // Memanggil URL dan Key langsung dari file pengaturan.js
         const supabase = supabase.createClient(CONFIG_APP.supabaseUrl, CONFIG_APP.supabaseKey);
 
         async function checkDemoAccess() {
@@ -26,25 +25,24 @@
                     .eq('ip_address', userIp)
                     .maybeSingle(); 
 
-                if (error) {
-                    console.error("Error cek IP Supabase:", error);
-                }
+                if (error) console.error("Error cek IP Supabase:", error);
 
                 if (data) {
-                    document.documentElement.innerHTML = `
-                        <head><title>Sesi Demo Berakhir</title></head>
-                        <body style="display:flex; flex-direction:column; align-items:center; justify-content:center; height:100vh; background:#0f172a; color:white; font-family:sans-serif; text-align:center; padding:20px; margin:0;">
-                            <h1 style="font-size:24px; margin-bottom:10px;">⏳ Sesi Demo Anda Telah Berakhir</h1>
-                            <p style="color:#94a3b8; margin-bottom:20px; max-width: 400px; line-height: 1.6;">Terima kasih telah mencoba pengalaman aplikasi ini. Sesuai kebijakan, versi demo hanya dapat digunakan untuk <b>satu kali percobaan</b> per IP/Perangkat.</p>
-                            <a href="https://moodifypreset.myscalev.com/coquickselectandsorter" style="background:#2563eb; color:white; padding:12px 24px; border-radius:8px; text-decoration:none; font-weight:bold; box-shadow: 0 4px 6px rgba(0,0,0,0.3);">Beli Versi Full Sekarang</a>
-                        </body>`;
+                    // IP DITEMUKAN: Munculkan Pop-up Batas Akses Habis (Kunci Layar)
+                    const modal = document.getElementById('sessionEndedModal');
+                    const content = document.getElementById('sessionEndedContent');
+                    modal.classList.remove('hidden');
+                    modal.classList.add('flex');
+                    document.body.style.overflow = 'hidden'; // Kunci scroll
+                    
+                    setTimeout(() => {
+                        modal.classList.replace('opacity-0', 'opacity-100');
+                        content.classList.replace('scale-95', 'scale-100');
+                    }, 50);
                 } else {
+                    // IP BARU: Catat ke database
                     const { error: insertError } = await supabase.from('demo_tracking').insert([{ ip_address: userIp }]);
-                    if (insertError) {
-                        console.error("Gagal menyimpan IP:", insertError);
-                    } else {
-                        console.log("IP Baru berhasil didaftarkan untuk sesi demo.");
-                    }
+                    if (insertError) console.error("Gagal menyimpan IP:", insertError);
                 }
             } catch (err) {
                 console.error("Sistem demo error:", err); 
@@ -126,7 +124,6 @@
 
             <!-- TOMBOL FITUR & ORDER -->
             <div class="flex items-center gap-2 w-full md:w-auto justify-center md:justify-end flex-wrap">
-                
                 <button onclick="showPremiumPopup()" class="flex items-center justify-center px-3 py-1.5 bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200 rounded-lg text-sm transition shadow-sm border border-slate-200 dark:border-slate-600" title="Generate Link">
                     <i class="fa-solid fa-link text-blue-600 dark:text-blue-400"></i> <span class="hidden lg:inline ml-1 font-bold">Generate Link</span>
                 </button>
@@ -368,6 +365,21 @@
                     Nanti Saja
                 </button>
             </div>
+        </div>
+    </div>
+
+    <!-- MODAL SESI DEMO BERAKHIR (NEW POP-UP LOCK) -->
+    <div id="sessionEndedModal" class="fixed inset-0 bg-slate-900/90 backdrop-blur-md z-[999] hidden flex-col justify-center items-center opacity-0 transition-opacity duration-500 px-4">
+        <div class="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-3xl max-w-md w-full p-8 shadow-2xl text-center transform scale-95 transition-transform duration-500" id="sessionEndedContent">
+            <div class="w-20 h-20 bg-red-100 dark:bg-red-900/50 text-red-600 dark:text-red-400 rounded-full flex items-center justify-center text-4xl mx-auto mb-6 shadow-inner">
+                <i class="fa-solid fa-stopwatch"></i>
+            </div>
+            <h3 class="text-2xl font-black text-slate-800 dark:text-white mb-3 uppercase tracking-wide">Batas Akses Habis</h3>
+            <p class="text-slate-500 dark:text-slate-400 text-sm mb-8 leading-relaxed">Terima kasih telah mencoba demo aplikasi ini. Sesi Anda telah berakhir. Sesuai kebijakan kami, fitur demo dibatasi hanya untuk satu kali penggunaan per perangkat/IP.</p>
+            
+            <a href="https://moodifypreset.myscalev.com/coquickselectandsorter" target="_blank" class="w-full py-4 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl transition shadow-lg shadow-blue-600/30 text-sm flex justify-center items-center gap-2 uppercase tracking-wide">
+                <i class="fa-solid fa-cart-shopping text-lg"></i> Order Sekarang Versi Full
+            </a>
         </div>
     </div>
 
