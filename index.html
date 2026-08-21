@@ -3,146 +3,17 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title id="pageTitle">Client Portal</title>
+    <title id="pageTitle">Client Portal & Sorter - DEMO</title>
     
-    <!-- SCRIPT SUPABASE & DEMO TRACKER -->
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <!-- 1. PENGATURAN & DATABASE HARUS DIMUAT PERTAMA -->
     <script src="pengaturan.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+    <!-- 2. TAILWIND & CSS -->
     <script>
-        const db = supabase.createClient(CONFIG_APP.supabaseUrl, CONFIG_APP.supabaseKey);
-        let demoTimerInterval;
-        let userIpGlobal = null;
-        let isBurned = false;
-
-        // Fungsionalitas Status Online Real-time untuk Admin
-        function laporStatusOnline() {
-            const idPengunjung = 'visitor-' + Math.random().toString(36).substr(2, 9);
-            const room = db.channel('online_visitors', {
-                config: { presence: { key: idPengunjung } }
-            });
-            room.subscribe(async (status) => {
-                if (status === 'SUBSCRIBED') {
-                    await room.track({ online_at: new Date().toISOString() });
-                }
-            });
-        }
-
-        // Fungsi Kunci UI Saat Waktu Habis
-        function lockAppDemo() {
-            if (demoTimerInterval) clearInterval(demoTimerInterval);
-            const modal = document.getElementById('sessionEndedModal');
-            const content = document.getElementById('sessionEndedContent');
-            const alertBox = document.getElementById('customAlert');
-            if(alertBox) alertBox.classList.add('-translate-y-32', 'opacity-0');
-
-            if (modal) {
-                modal.classList.remove('hidden');
-                modal.classList.add('flex');
-            }
-            document.body.style.overflow = 'hidden'; 
-            
-            setTimeout(() => {
-                if (modal) modal.classList.replace('opacity-0', 'opacity-100');
-                if (content) content.classList.replace('scale-95', 'scale-100');
-            }, 10);
-        }
-
-        // Eksekusi Akhir 7 Menit (Kunci Layar & Input IP ke Database)
-        async function burnDemoAndLock() {
-            if (isBurned) return;
-            isBurned = true;
-            
-            lockAppDemo(); 
-            
-            if (userIpGlobal) {
-                const { data } = await db.from('demo_tracking').select('ip_address').eq('ip_address', userIpGlobal).maybeSingle();
-                if (!data) {
-                    await db.from('demo_tracking').insert([{ ip_address: userIpGlobal }]);
-                }
-            }
-        }
-
-        // Timer 7 Menit Berjalan Lintas Refresh
-        function startOrResumeTimer() {
-            const timerContainer = document.getElementById('demoTimerContainer');
-            const timerDisplay = document.getElementById('demoTimerDisplay');
-            
-            if (timerContainer) {
-                timerContainer.classList.remove('hidden');
-                timerContainer.classList.add('flex');
-            }
-
-            const now = Date.now();
-            let endTime = localStorage.getItem('demo_end_time');
-
-            if (!endTime) {
-                endTime = now + (7 * 60 * 1000); // 7 Menit
-                localStorage.setItem('demo_end_time', endTime);
-            }
-
-            function updateTimer() {
-                const currentTime = Date.now();
-                const timeLeft = Math.max(0, Math.floor((endTime - currentTime) / 1000));
-
-                let m = Math.floor(timeLeft / 60).toString().padStart(2, '0');
-                let s = (timeLeft % 60).toString().padStart(2, '0');
-                if (timerDisplay) timerDisplay.innerText = `${m}:${s}`;
-
-                if (timeLeft <= 0) {
-                    clearInterval(demoTimerInterval);
-                    burnDemoAndLock(); 
-                }
-            }
-
-            updateTimer(); 
-            demoTimerInterval = setInterval(updateTimer, 1000);
-        }
-
-        // Pengecekan Awal IP
-        async function initDemoTracking() {
-            laporStatusOnline(); 
-
-            try {
-                const ipRes = await fetch('https://api.ipify.org?format=json');
-                const ipData = await ipRes.json();
-                userIpGlobal = ipData.ip;
-
-                const { data, error } = await db
-                    .from('demo_tracking')
-                    .select('ip_address')
-                    .eq('ip_address', userIpGlobal)
-                    .maybeSingle(); 
-
-                if (data) {
-                    localStorage.removeItem('demo_end_time'); 
-                    lockAppDemo();
-                } else {
-                    let savedTime = localStorage.getItem('demo_end_time');
-                    if (savedTime && Date.now() >= parseInt(savedTime)) {
-                        localStorage.removeItem('demo_end_time'); 
-                    }
-                    startOrResumeTimer();
-                }
-            } catch (err) {
-                console.error("Gagal inisiasi IP:", err); 
-                startOrResumeTimer(); 
-            }
-        }
-        
-        document.addEventListener("DOMContentLoaded", () => {
-            initDemoTracking();
-        });
-    </script>
-    
-    <script>
-        tailwind = {
-            config: {
-                darkMode: 'class', 
-            }
-        }
+        tailwind = { config: { darkMode: 'class' } }
     </script>
     <script src="https://cdn.tailwindcss.com"></script>
-    
     <script>
         if (localStorage.getItem('theme') === 'dark') {
             document.documentElement.classList.add('dark');
@@ -151,7 +22,6 @@
             localStorage.setItem('theme', 'light');
         }
     </script>
-
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
@@ -172,38 +42,21 @@
             50% { transform: scale(1.3) rotate(10deg); opacity: 1; }
             100% { transform: scale(1) rotate(0deg); opacity: 1; }
         }
-        .photo-card.selected .check-badge {
-            animation: checkPop 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
-        }
-        
-        @keyframes breathing {
-            0% { transform: scale(0.95); }
-            50% { transform: scale(0.92); }
-            100% { transform: scale(0.95); }
-        }
-        .photo-card.selected img {
-            border-radius: 0.5rem;
-            animation: breathing 3s infinite ease-in-out; 
-            box-shadow: 0 0 0 3px #3b82f6; 
-        }
-
-        .tooltip-triangle {
-            position: absolute;
-            bottom: -4px;
-            left: 50%;
-            transform: translateX(-50%) rotate(45deg);
-            width: 10px;
-            height: 10px;
-            background-color: #2563eb; 
-        }
+        .photo-card.selected .check-badge { animation: checkPop 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards; }
+        @keyframes breathing { 0% { transform: scale(0.95); } 50% { transform: scale(0.92); } 100% { transform: scale(0.95); } }
+        .photo-card.selected img { border-radius: 0.5rem; animation: breathing 3s infinite ease-in-out; box-shadow: 0 0 0 3px #3b82f6; }
+        .tooltip-triangle { position: absolute; bottom: -4px; left: 50%; transform: translateX(-50%) rotate(45deg); width: 10px; height: 10px; background-color: #2563eb; }
+        .log-container { font-family: 'Courier New', Courier, monospace; }
     </style>
 </head>
 <body class="text-slate-800 dark:text-slate-200 bg-slate-50 dark:bg-slate-900 pb-32 flex flex-col min-h-screen">
 
+    <!-- HEADER GABUNGAN PORTAL & SORTER -->
     <header class="bg-white dark:bg-slate-800 shadow-sm border-b border-slate-200 dark:border-slate-700 sticky top-0 z-40 transition-colors duration-300">
-        <div class="max-w-6xl mx-auto px-4 py-4 flex justify-between items-center flex-wrap gap-3">
-            <div class="flex items-center gap-3">
-                <div class="bg-slate-900 dark:bg-slate-700 text-white w-10 h-10 rounded-xl flex items-center justify-center text-xl shadow-lg">
+        <div class="max-w-6xl mx-auto px-4 py-4 flex flex-col md:flex-row justify-between items-center gap-4">
+            
+            <div class="flex items-center gap-3 w-full md:w-auto">
+                <div class="bg-slate-900 dark:bg-slate-700 text-white w-10 h-10 rounded-xl flex items-center justify-center text-xl shadow-lg shrink-0">
                     <i class="fa-solid fa-camera-retro"></i>
                 </div>
                 <div>
@@ -211,17 +64,33 @@
                         <span id="headerVendorName">Client Portal</span>
                         <span class="bg-yellow-500 text-white px-2 py-0.5 rounded text-[10px] font-bold shrink-0">DEMO</span>
                     </h1>
-                    <p class="text-xs text-slate-500 dark:text-slate-400 font-medium uppercase tracking-wider" data-i18n="subtitle">Alat Seleksi Aman</p>
+                    <p class="text-[10px] text-blue-600 dark:text-blue-400 font-bold uppercase tracking-wider" data-i18n="subtitle">Alat Seleksi Aman</p>
                 </div>
             </div>
             
-            <div class="flex items-center gap-2 flex-wrap">
-                <!-- INDIKATOR WAKTU MUNDUR 7 MENIT -->
+            <!-- MENU TAB NAVIGASI (Wajib agar bisa pindah ke Sorter) -->
+            <div class="flex bg-slate-100 dark:bg-slate-900 p-1 rounded-xl shadow-inner w-full md:w-auto justify-center">
+                <button id="tab-selector" onclick="switchApp('selector')" class="px-4 md:px-5 py-2 bg-white dark:bg-slate-700 shadow-sm rounded-lg text-sm font-bold text-blue-600 dark:text-blue-400 transition w-1/2 md:w-auto flex items-center justify-center gap-2">
+                    <i class="fa-solid fa-images"></i> <span>Portal</span>
+                </button>
+                <button id="tab-sorter" onclick="switchApp('sorter')" class="px-4 md:px-5 py-2 rounded-lg text-sm font-bold text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 transition w-1/2 md:w-auto flex items-center justify-center gap-2">
+                    <i class="fa-solid fa-folder-tree"></i> <span>Sorter</span>
+                </button>
+            </div>
+
+            <!-- TOMBOL FITUR KANAN -->
+            <div class="flex items-center gap-2 w-full md:w-auto justify-center md:justify-end flex-wrap">
+                
+                <!-- INDIKATOR TIMER DEMO 7 MENIT -->
                 <div id="demoTimerContainer" class="hidden items-center justify-center px-3 py-1.5 bg-red-100 dark:bg-red-900/50 text-red-600 dark:text-red-400 rounded-lg text-sm font-bold shadow-sm border border-red-200 dark:border-red-800" title="Sisa Waktu Demo">
                     <i class="fa-regular fa-clock animate-pulse mr-1.5"></i> <span id="demoTimerDisplay" class="font-mono">07:00</span>
                 </div>
 
-                <button onclick="showTutorial(true)" class="flex items-center justify-center w-9 h-9 md:w-auto md:px-3 md:py-1.5 bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200 rounded-lg text-sm transition shadow-sm border border-slate-200 dark:border-slate-600" title="Panduan">
+                <a href="https://moodifypreset.myscalev.com/coquickselectandsorter" target="_blank" class="flex items-center justify-center px-4 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-bold transition shadow-md border border-blue-700">
+                    <i class="fa-solid fa-cart-shopping"></i> <span class="ml-1 hidden sm:inline">Beli Full App</span><span class="sm:hidden ml-1">Beli</span>
+                </a>
+
+                <button onclick="showTutorial(true)" id="btnTutorial" class="flex items-center justify-center w-9 h-9 md:w-auto md:px-3 md:py-1.5 bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200 rounded-lg text-sm transition shadow-sm border border-slate-200 dark:border-slate-600" title="Panduan">
                     <i class="fa-solid fa-circle-question text-blue-600 dark:text-blue-400"></i> <span class="hidden md:inline ml-1 font-bold" data-i18n="btnGuide">Panduan</span>
                 </button>
                 <button onclick="toggleDarkMode()" id="darkModeBtn" class="flex items-center justify-center w-9 h-9 bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 rounded-lg text-sm transition shadow-sm border border-slate-200 dark:border-slate-600">
@@ -234,19 +103,19 @@
         </div>
     </header>
 
-    <main id="clientView" class="flex-grow w-full">
-        
+    <!-- ============================================== -->
+    <!-- CONTAINER 1: CLIENT PORTAL (SELECTOR)          -->
+    <!-- ============================================== -->
+    <main id="view-selector" class="flex-grow w-full flex flex-col transition-opacity duration-300">
         <div id="greetingSection" class="hidden max-w-6xl w-full mx-auto px-4 pt-8">
             <div class="bg-slate-900 dark:bg-slate-800 rounded-3xl p-6 md:p-8 text-white shadow-xl relative overflow-hidden flex flex-col md:flex-row justify-between items-start md:items-center gap-6 border border-slate-800 dark:border-slate-700">
                 <div class="absolute -right-10 -top-10 text-slate-800 dark:text-slate-700 opacity-50 transform rotate-12 pointer-events-none">
                     <i class="fa-solid fa-camera-retro text-[150px]"></i>
                 </div>
-                
                 <div class="relative z-10">
                     <h2 class="text-2xl md:text-3xl font-bold mb-1"><span data-i18n="welcomeTitle">Hallo</span>, <span id="displayClientName" class="text-blue-400 capitalize">Kakak</span> 👋</h2>
-                    <p class="text-slate-300 text-sm md:text-base leading-relaxed" data-i18n="welcomeDesc">Selamat datang di portal seleksi foto dari {vendor}.</p>
+                    <p class="text-slate-300 text-sm md:text-base leading-relaxed" data-i18n="welcomeDesc">Selamat datang di portal seleksi foto.</p>
                 </div>
-                
                 <div id="greetingQuotaInfo" class="hidden relative z-10 bg-slate-800/80 dark:bg-slate-900/80 backdrop-blur-md border border-slate-700 px-5 py-3 rounded-2xl items-center gap-4 shadow-inner">
                     <div class="w-12 h-12 rounded-xl bg-blue-900/50 flex items-center justify-center text-blue-400 text-lg">
                         <i class="fa-solid fa-images"></i>
@@ -260,7 +129,6 @@
         </div>
 
         <div class="max-w-6xl mx-auto px-4 py-8 w-full">
-            <!-- Peringatan Demo -->
             <div class="bg-blue-50 dark:bg-blue-900/30 border border-blue-200 dark:border-blue-800 text-blue-800 dark:text-blue-300 rounded-xl p-4 mb-6 flex gap-3 text-sm shadow-sm max-w-2xl mx-auto">
                 <i class="fa-solid fa-circle-info mt-0.5 text-blue-600 dark:text-blue-400"></i>
                 <div>
@@ -277,9 +145,7 @@
                     <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
                         <i class="fa-brands fa-google-drive text-slate-400 text-lg"></i>
                     </div>
-                    <input type="text" id="driveLink" 
-                        class="w-full pl-12 pr-4 py-3.5 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-white rounded-xl focus:ring-2 focus:ring-slate-800 dark:focus:ring-blue-500 outline-none transition" 
-                        placeholder="Link Google Drive...">
+                    <input type="text" id="driveLink" class="w-full pl-12 pr-4 py-3.5 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-white rounded-xl focus:ring-2 focus:ring-slate-800 dark:focus:ring-blue-500 outline-none transition" placeholder="Link Google Drive...">
                 </div>
                 <div class="mt-6 flex justify-center">
                     <button onclick="loadFromDrive()" class="px-8 py-3.5 bg-slate-900 dark:bg-blue-600 hover:bg-black dark:hover:bg-blue-700 text-white font-medium rounded-xl transition shadow-lg flex items-center justify-center gap-2">
@@ -297,8 +163,7 @@
                 <div id="folderNavContainer" class="hidden mb-6 bg-white dark:bg-slate-800 rounded-2xl p-5 border border-slate-200 dark:border-slate-700 shadow-sm">
                     <div class="flex items-center justify-between mb-4 border-b border-slate-100 dark:border-slate-700 pb-3">
                         <h4 class="font-bold text-slate-700 dark:text-slate-200 text-sm flex items-center">
-                            <i class="fa-solid fa-folder-tree mr-2 text-blue-500"></i> 
-                            <span data-i18n="folderTitle">Sub-Folder Tersedia</span>
+                            <i class="fa-solid fa-folder-tree mr-2 text-blue-500"></i> <span data-i18n="folderTitle">Sub-Folder Tersedia</span>
                         </h4>
                         <button id="btnBackFolder" onclick="navigateBackFolder()" class="hidden text-xs font-bold bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 px-3 py-1.5 rounded-lg shadow-sm border border-slate-200 dark:border-slate-600 hover:bg-blue-50 hover:text-blue-600 transition flex items-center">
                             <i class="fa-solid fa-arrow-left mr-1.5"></i> <span data-i18n="btnBackFolder">Kembali</span>
@@ -312,45 +177,33 @@
                         <h3 class="font-bold text-xl text-slate-800 dark:text-white flex items-center gap-2">
                             <span id="currentFolderDisplay" data-i18n="galleryTitle">Koleksi Foto</span>
                         </h3>
-                        <p class="text-sm text-slate-500 dark:text-slate-400 mt-1" data-i18n="galleryDesc">Klik gambar untuk memilih. Klik ikon untuk perbesar & tambah catatan.</p>
+                        <p class="text-sm text-slate-500 dark:text-slate-400 mt-1" data-i18n="galleryDesc">Klik gambar untuk memilih.</p>
                     </div>
                     <div class="flex flex-wrap items-center gap-2">
-                        
-                        <!-- TOMBOL GRID DENGAN ANIMASI BALON TOOLTIP -->
                         <div class="relative">
-                            <button onclick="hideTooltip('gridTooltip'); toggleGridSize()" class="text-sm bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-600 text-slate-700 dark:text-slate-200 py-2 px-3 rounded-lg font-medium cursor-pointer shadow-sm hover:bg-slate-50 dark:hover:bg-slate-700 transition" title="Ubah Ukuran Grid">
-                                <i class="fa-solid fa-table-cells-large"></i>
-                            </button>
+                            <button onclick="hideTooltip('gridTooltip'); toggleGridSize()" class="text-sm bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-600 text-slate-700 dark:text-slate-200 py-2 px-3 rounded-lg font-medium cursor-pointer shadow-sm hover:bg-slate-50 dark:hover:bg-slate-700 transition" title="Ubah Ukuran Grid"><i class="fa-solid fa-table-cells-large"></i></button>
                             <div id="gridTooltip" class="hidden opacity-0 absolute -top-12 left-1/2 -translate-x-1/2 bg-blue-600 text-white text-[10px] font-bold py-1.5 px-3 rounded-lg animate-bounce shadow-lg pointer-events-none whitespace-nowrap z-50 transition-all duration-300">
-                                <span data-i18n="gridTip">Ubah Baris Foto</span>
-                                <div class="tooltip-triangle"></div>
+                                <span data-i18n="gridTip">Ubah Baris Foto</span><div class="tooltip-triangle"></div>
                             </div>
                         </div>
 
-                        <!-- DROPDOWN URUTAN -->
                         <div class="relative">
-                            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                                <i class="fa-solid fa-arrow-down-a-z text-slate-400 text-sm"></i>
-                            </div>
+                            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none"><i class="fa-solid fa-arrow-down-a-z text-slate-400 text-sm"></i></div>
                             <select id="sortDropdown" onchange="applySort(this.value)" class="text-sm bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-600 text-slate-700 dark:text-slate-200 py-2 pl-9 pr-8 rounded-lg font-medium cursor-pointer shadow-sm focus:outline-none focus:ring-2 focus:ring-slate-800 appearance-none transition">
                                 <option value="default" data-i18n="sortDefault">Urutan Asli</option>
                                 <option value="asc">A - Z</option>
                                 <option value="desc">Z - A</option>
                                 <option value="random" data-i18n="sortRandom">Acak (Random)</option>
                             </select>
-                            <div class="absolute inset-y-0 right-0 pr-2 flex items-center pointer-events-none">
-                                <i class="fa-solid fa-chevron-down text-slate-400 text-xs"></i>
-                            </div>
+                            <div class="absolute inset-y-0 right-0 pr-2 flex items-center pointer-events-none"><i class="fa-solid fa-chevron-down text-slate-400 text-xs"></i></div>
                         </div>
 
-                        <!-- TOMBOL ACAK LAGI DENGAN ANIMASI BALON TOOLTIP -->
                         <div class="relative">
                             <button id="btnReshuffle" onclick="hideTooltip('reshuffleTooltip'); applySort('random')" class="hidden text-sm bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-200 py-2 px-3 rounded-lg font-bold transition shadow-sm hover:bg-slate-200 dark:hover:bg-slate-600 border border-slate-300 dark:border-slate-600">
                                 <i class="fa-solid fa-dice"></i> <span class="hidden sm:inline ml-1" data-i18n="btnReshuffle">Acak Lagi</span>
                             </button>
                             <div id="reshuffleTooltip" class="hidden opacity-0 absolute -top-12 left-1/2 -translate-x-1/2 bg-blue-600 text-white text-[10px] font-bold py-1.5 px-3 rounded-lg animate-bounce shadow-lg pointer-events-none whitespace-nowrap z-50 transition-all duration-300">
-                                <span data-i18n="reshuffleTip">Tekan ini untuk acak foto</span>
-                                <div class="tooltip-triangle"></div>
+                                <span data-i18n="reshuffleTip">Tekan ini untuk acak foto</span><div class="tooltip-triangle"></div>
                             </div>
                         </div>
 
@@ -366,11 +219,60 @@
         </div>
     </main>
 
+    <!-- ============================================== -->
+    <!-- CONTAINER 2: AUTO RAW SORTER                   -->
+    <!-- ============================================== -->
+    <main id="view-sorter" class="flex-grow w-full max-w-4xl mx-auto px-4 py-8 hidden flex-col transition-opacity duration-300">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+            <div class="bg-white dark:bg-slate-800 rounded-2xl p-6 shadow-sm border border-slate-100 dark:border-slate-700 flex flex-col gap-4 relative overflow-hidden">
+                <h2 class="font-bold text-lg text-slate-800 dark:text-white border-b border-slate-100 dark:border-slate-700 pb-3"><i class="fa-solid fa-folder-tree mr-2 text-blue-600 dark:text-blue-400"></i> Pengaturan Folder</h2>
+                
+                <div>
+                    <label class="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-2">1. Folder Sumber (RAW Asli)</label>
+                    <p class="text-[11px] text-slate-400 mb-3 leading-relaxed">Pilih folder induk, sistem mencari otomatis ke sub-folder (Cam 1, Cam 2, dll).</p>
+                    <button id="btnSource" onclick="selectSource()" class="w-full py-3 bg-slate-50 dark:bg-slate-900 hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 font-semibold rounded-xl transition flex items-center justify-center gap-2 border border-slate-200 dark:border-slate-600 shadow-sm">
+                        <i class="fa-regular fa-folder-open text-blue-500"></i> Pilih Folder Sumber
+                    </button>
+                    <p id="sourcePath" class="text-xs text-slate-500 mt-2 truncate hidden"><i class="fa-solid fa-check text-green-500 mr-1"></i> Terpilih: <span class="font-mono text-slate-800 dark:text-slate-200"></span></p>
+                </div>
+
+                <div class="h-px bg-slate-100 dark:bg-slate-700 w-full my-2"></div>
+
+                <div>
+                    <label class="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-2">2. Folder Tujuan (Hasil Copy)</label>
+                    <button id="btnDest" onclick="selectDest()" class="w-full py-3 bg-slate-50 dark:bg-slate-900 hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 font-semibold rounded-xl transition flex items-center justify-center gap-2 border border-slate-200 dark:border-slate-600 shadow-sm">
+                        <i class="fa-solid fa-folder-plus text-blue-500"></i> Pilih Folder Tujuan
+                    </button>
+                    <p id="destPath" class="text-xs text-slate-500 mt-2 truncate hidden"><i class="fa-solid fa-check text-green-500 mr-1"></i> Terpilih: <span class="font-mono text-slate-800 dark:text-slate-200"></span></p>
+                </div>
+            </div>
+
+            <div class="bg-white dark:bg-slate-800 rounded-2xl p-6 shadow-sm border border-slate-100 dark:border-slate-700 flex flex-col">
+                <h2 class="font-bold text-lg text-slate-800 dark:text-white border-b border-slate-100 dark:border-slate-700 pb-3 mb-4"><i class="fa-solid fa-paste mr-2 text-blue-600 dark:text-blue-400"></i> List Foto dari Klien</h2>
+                <textarea id="fileList" class="w-full flex-grow bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-white rounded-xl p-4 text-sm focus:ring-2 focus:ring-blue-600 outline-none transition resize-none font-mono shadow-inner" placeholder="Paste (Tempel) daftar list dari tombol Copy List di Portal...&#10;&#10;Atau paste manual dari WhatsApp di sini..."></textarea>
+            </div>
+        </div>
+
+        <button id="processBtn" onclick="processFiles()" class="w-full py-4 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl transition flex items-center justify-center gap-2 shadow-lg shadow-blue-600/30 mb-6 text-lg">
+            <i class="fa-solid fa-bolt"></i> Mulai Sortir & Copy File (Maks 15 Foto)
+        </button>
+
+        <div class="bg-slate-900 rounded-2xl p-6 shadow-lg overflow-hidden flex flex-col h-64 border border-slate-800">
+            <div class="flex justify-between items-center mb-4 border-b border-slate-700 pb-2">
+                <h3 class="text-white font-bold text-sm"><i class="fa-solid fa-terminal mr-2 text-slate-400"></i> Proses Log</h3>
+                <span id="progressText" class="text-green-400 font-bold text-sm bg-slate-800 border border-slate-700 px-3 py-1 rounded-lg">0 / 0 File Tercopy</span>
+            </div>
+            <div id="logOutput" class="log-container overflow-y-auto flex-grow text-xs leading-relaxed space-y-1">
+                <div class="text-slate-400">Sistem siap. Silakan pilih folder dan masukkan list foto.</div>
+            </div>
+        </div>
+    </main>
+
     <footer id="clientFooter" class="text-center py-6 mt-auto border-t border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 transition-colors">
         <p class="text-sm text-slate-400">&copy; <script>document.write(new Date().getFullYear())</script> Layanan eksklusif oleh <span id="footerVendorName" class="font-medium text-slate-500 dark:text-slate-300">Portal</span>.</p>
     </footer>
 
-    <!-- MODAL KUNCI LAYAR KETIKA WAKTU 7 MENIT HABIS -->
+    <!-- MODAL KUNCI LAYAR (AKHIR SESI DEMO 7 MENIT) -->
     <div id="sessionEndedModal" class="fixed inset-0 bg-slate-900/95 backdrop-blur-md z-[9999] hidden flex-col justify-center items-center opacity-0 transition-opacity duration-500 px-4">
         <div class="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-3xl max-w-md w-full p-8 shadow-2xl text-center transform scale-95 transition-transform duration-500" id="sessionEndedContent">
             <div class="w-20 h-20 bg-red-100 dark:bg-red-900/50 text-red-600 dark:text-red-400 rounded-full flex items-center justify-center text-4xl mx-auto mb-6 shadow-inner">
@@ -384,6 +286,7 @@
         </div>
     </div>
 
+    <!-- ACTION BAR SELEKSI FOTO -->
     <div id="actionBar" class="fixed bottom-0 left-0 w-full bg-white/95 dark:bg-slate-800/95 backdrop-blur-md border-t border-slate-200 dark:border-slate-700 shadow-[0_-10px_30px_-10px_rgba(0,0,0,0.1)] dark:shadow-[0_-10px_30px_-10px_rgba(0,0,0,0.5)] transform translate-y-full transition-transform duration-300 z-50">
         <div id="quotaContainer" class="hidden w-full px-4 md:px-8 pt-3 pb-1 max-w-6xl mx-auto border-b border-slate-100 dark:border-slate-700">
             <div class="flex justify-between items-end mb-1.5">
@@ -437,11 +340,11 @@
                 </li>
                 <li class="flex items-start gap-4">
                     <div class="bg-blue-600 text-white w-8 h-8 rounded-full flex items-center justify-center font-bold shrink-0 shadow-md">2</div>
-                    <p class="text-sm text-slate-600 dark:text-slate-300 pt-1" data-i18n="tut2"><strong>Zoom & Catatan:</strong> Klik ikon <i class="fa-solid fa-magnifying-glass-plus text-slate-800 dark:text-white mx-1"></i> untuk memperbesar gambar & tambah instruksi edit.</p>
+                    <p class="text-sm text-slate-600 dark:text-slate-300 pt-1" data-i18n="tut2"><strong>Zoom & Catatan:</strong> Klik ikon untuk memperbesar gambar & tambah instruksi edit.</p>
                 </li>
                 <li class="flex items-start gap-4">
                     <div class="bg-blue-600 text-white w-8 h-8 rounded-full flex items-center justify-center font-bold shrink-0 shadow-md">3</div>
-                    <p class="text-sm text-slate-600 dark:text-slate-300 pt-1" data-i18n="tut4"><strong>Tampilan & Urutan:</strong> Klik ikon <i class="fa-solid fa-table-cells-large text-slate-800 dark:text-white mx-1"></i> untuk mengubah jumlah baris grid foto. Gunakan dropdown untuk melihat foto dalam <em>'Urutan Asli'</em> (berdasarkan jam foto) atau <em>'Acak'</em>. Klik tombol <em>'Lihat Pilihan'</em> untuk meninjau foto yang sudah dipilih.</p>
+                    <p class="text-sm text-slate-600 dark:text-slate-300 pt-1" data-i18n="tut4"><strong>Tampilan & Urutan:</strong> Gunakan opsi dropdown untuk melihat foto dalam format <em>'Urutan Asli'</em> atau <em>'Acak'</em>.</p>
                 </li>
                 <li class="flex items-start gap-4">
                     <div class="bg-blue-600 text-white w-8 h-8 rounded-full flex items-center justify-center font-bold shrink-0 shadow-md">4</div>
@@ -474,13 +377,48 @@
         </div>
     </div>
 
-    <!-- LOGIKA JAVASCRIPT -->
+    <!-- SATU-SATUNYA BLOK LOGIKA JAVASCRIPT UTAMA (TIDAK ADA VARIABEL GANDA) -->
     <script>
+        // ----------------------------------------------------
+        // UI SWITCH (PORTAL VS SORTER)
+        // ----------------------------------------------------
+        function switchApp(appName) {
+            const viewSelector = document.getElementById('view-selector');
+            const viewSorter = document.getElementById('view-sorter');
+            const tabSelector = document.getElementById('tab-selector');
+            const tabSorter = document.getElementById('tab-sorter');
+            const actionBar = document.getElementById('actionBar');
+            const btnTutorial = document.getElementById('btnTutorial');
+
+            if (appName === 'selector') {
+                viewSelector.classList.remove('hidden'); viewSelector.classList.add('flex'); 
+                viewSorter.classList.add('hidden'); viewSorter.classList.remove('flex');
+                
+                tabSelector.classList.replace('text-slate-500', 'text-blue-600'); tabSelector.classList.replace('dark:text-slate-400', 'dark:text-blue-400'); tabSelector.classList.add('bg-white', 'dark:bg-slate-700', 'shadow-sm'); tabSelector.classList.remove('hover:text-slate-700', 'dark:hover:text-slate-200');
+                tabSorter.classList.replace('text-blue-600', 'text-slate-500'); tabSorter.classList.replace('dark:text-blue-400', 'dark:text-slate-400'); tabSorter.classList.remove('bg-white', 'dark:bg-slate-700', 'shadow-sm'); tabSorter.classList.add('hover:text-slate-700', 'dark:hover:text-slate-200');
+                
+                if(btnTutorial) { btnTutorial.classList.remove('hidden'); btnTutorial.classList.add('flex'); }
+                if(appState.selectedMap && appState.selectedMap.size > 0 && actionBar) actionBar.classList.remove('translate-y-full');
+            } else {
+                viewSelector.classList.add('hidden'); viewSelector.classList.remove('flex'); 
+                viewSorter.classList.remove('hidden'); viewSorter.classList.add('flex');
+                
+                tabSorter.classList.replace('text-slate-500', 'text-blue-600'); tabSorter.classList.replace('dark:text-slate-400', 'dark:text-blue-400'); tabSorter.classList.add('bg-white', 'dark:bg-slate-700', 'shadow-sm'); tabSorter.classList.remove('hover:text-slate-700', 'dark:hover:text-slate-200');
+                tabSelector.classList.replace('text-blue-600', 'text-slate-500'); tabSelector.classList.replace('dark:text-blue-400', 'dark:text-slate-400'); tabSelector.classList.remove('bg-white', 'dark:bg-slate-700', 'shadow-sm'); tabSelector.classList.add('hover:text-slate-700', 'dark:hover:text-slate-200');
+                
+                if(btnTutorial) { btnTutorial.classList.add('hidden'); btnTutorial.classList.remove('flex'); }
+                if(actionBar) actionBar.classList.add('translate-y-full');
+            }
+        }
+
+        // ----------------------------------------------------
+        // KONFIGURASI GLOBAL & TRANSLASI
+        // ----------------------------------------------------
         const ITEMS_PER_PAGE = 200; 
         
         let appState = { 
             rootFolderId: null, folderId: null, clientName: '', 
-            photos: [], originalPhotos: [], folders: [], folderHistory: [],
+            photos: [], originalPool: [], folders: [], folderHistory: [],
             selectedMap: new Map(), 
             notes: {}, currentPage: 1, kuota: null, 
             viewMode: 'all', sortOrder: 'default', lang: 'id',
@@ -501,7 +439,7 @@
                 folderTitle: "Sub-Folder Tersedia",
                 btnBackFolder: "Kembali",
                 galleryTitle: "Koleksi Foto",
-                galleryDesc: "Klik gambar untuk memilih.",
+                galleryDesc: "Klik gambar untuk memilih. Klik ikon untuk perbesar & tambah catatan.",
                 sortDefault: "Urutan Asli",
                 sortRandom: "Acak (Random)",
                 btnReshuffle: "Acak Lagi",
@@ -516,6 +454,7 @@
                 tutDesc: "Ikuti panduan mudah ini untuk menyeleksi foto favorit Anda:",
                 tut1: "<strong>Pilih Foto:</strong> Klik (tap) langsung pada gambar foto untuk memilihnya.",
                 tut2: "<strong>Zoom & Catatan:</strong> Klik ikon untuk memperbesar gambar & tambah instruksi edit.",
+                tut4: "<strong>Tampilan & Urutan:</strong> Gunakan dropdown untuk mengacak urutan foto.",
                 tut3: "<strong>Kirim List:</strong> Jika sudah selesai, klik tombol Kirim WA atau Download di bagian bawah.",
                 btnTut: "Mengerti, Mulai Memilih!",
                 btnGuide: "Panduan",
@@ -542,7 +481,7 @@
                 folderTitle: "Available Sub-Folders",
                 btnBackFolder: "Go Back",
                 galleryTitle: "Photo Collection",
-                galleryDesc: "Click an image to select.",
+                galleryDesc: "Click an image to select. Click to zoom & add notes.",
                 sortDefault: "Original Order",
                 sortRandom: "Randomize",
                 btnReshuffle: "Shuffle Again",
@@ -557,6 +496,7 @@
                 tutDesc: "Follow these simple steps:",
                 tut1: "<strong>Select Photo:</strong> Click directly on the image to select it.",
                 tut2: "<strong>Zoom & Notes:</strong> Click the icon to enlarge & add notes.",
+                tut4: "<strong>View & Sort:</strong> Use the dropdown to randomize photos.",
                 tut3: "<strong>Send List:</strong> When finished, click send or download.",
                 btnTut: "Got it, Start Selecting!",
                 btnGuide: "Guide",
@@ -622,12 +562,52 @@
         let hasSeenTutorial = false; 
         let tooltipTimeout;
 
+        document.addEventListener("DOMContentLoaded", () => {
+            updateDarkModeIcon(document.documentElement.classList.contains('dark'));
+
+            if (typeof CONFIG_APP !== 'undefined') {
+                document.getElementById('footerVendorName').textContent = CONFIG_APP.namaVendor || 'Studio Foto';
+            }
+
+            appState.kuota = 15;
+            document.getElementById('quotaContainer').classList.remove('hidden'); document.getElementById('quotaContainer').classList.add('block');
+            document.getElementById('greetingQuotaInfo').classList.remove('hidden'); document.getElementById('greetingQuotaInfo').classList.add('flex');
+            document.getElementById('greetingQuotaLimit').textContent = appState.kuota;
+
+            const urlParams = new URLSearchParams(window.location.search);
+            if (urlParams.get('n')) {
+                appState.clientName = decodeURIComponent(urlParams.get('n')).replace(/-/g, ' ');
+                document.getElementById('displayClientName').textContent = appState.clientName;
+                document.getElementById('greetingSection').classList.remove('hidden');
+            } else {
+                document.getElementById('displayClientName').textContent = "Kakak";
+            }
+
+            if (urlParams.get('i')) {
+                document.getElementById('driveLink').value = `https://drive.google.com/drive/folders/${urlParams.get('i')}`;
+                document.getElementById('inputSection').classList.add('hidden');
+                setTimeout(() => { loadFromDrive(); }, 500);
+            } else {
+                document.getElementById('inputSection').classList.remove('hidden');
+            }
+
+            const lightboxEl = document.getElementById('lightbox');
+            lightboxEl.addEventListener('touchstart', e => {
+                if (e.target.tagName.toLowerCase() === 'textarea') return;
+                touchstartX = e.changedTouches[0].screenX;
+            }, { passive: true });
+            lightboxEl.addEventListener('touchend', e => {
+                if (e.target.tagName.toLowerCase() === 'textarea') return;
+                touchendX = e.changedTouches[0].screenX;
+                handleSwipeGesture();
+            }, { passive: true });
+            
+            applyTranslations(); 
+        });
+
         function hideTooltip(id) {
             const el = document.getElementById(id);
-            if(el) {
-                el.classList.replace('opacity-100', 'opacity-0');
-                setTimeout(() => el.classList.add('hidden'), 300);
-            }
+            if(el) { el.classList.replace('opacity-100', 'opacity-0'); setTimeout(() => el.classList.add('hidden'), 300); }
         }
 
         function triggerTooltipsAnimation() {
@@ -638,20 +618,13 @@
             if(gt) { gt.classList.remove('hidden'); setTimeout(()=> gt.classList.replace('opacity-0', 'opacity-100'), 50); }
             if(rt && document.getElementById('sortDropdown').value === 'random') { rt.classList.remove('hidden'); setTimeout(()=> rt.classList.replace('opacity-0', 'opacity-100'), 50); }
             
-            tooltipTimeout = setTimeout(() => {
-                hideTooltip('gridTooltip');
-                hideTooltip('reshuffleTooltip');
-            }, 8000);
+            tooltipTimeout = setTimeout(() => { hideTooltip('gridTooltip'); hideTooltip('reshuffleTooltip'); }, 8000);
         }
 
         function toggleGridSize() {
-            if (appState.gridMode === 2) {
-                appState.gridMode = 4;
-            } else if (appState.gridMode === 4) {
-                appState.gridMode = 6;
-            } else {
-                appState.gridMode = 2;
-            }
+            if (appState.gridMode === 2) { appState.gridMode = 4; } 
+            else if (appState.gridMode === 4) { appState.gridMode = 6; } 
+            else { appState.gridMode = 2; }
             renderGallery();
             const lang = appState.lang === 'id' ? 'Tampilan: ' + appState.gridMode + ' Foto per baris' : 'View: ' + appState.gridMode + ' Photos per row';
             showAlert(lang, 'success');
@@ -661,25 +634,16 @@
             if (hasSeenTutorial && !forceManual) return;
             const modal = document.getElementById('tutorialModal');
             const content = document.getElementById('tutorialContent');
-            modal.classList.remove('hidden');
-            modal.classList.add('flex');
-            setTimeout(() => {
-                modal.classList.replace('opacity-0', 'opacity-100');
-                content.classList.replace('scale-95', 'scale-100');
-            }, 10);
+            modal.classList.remove('hidden'); modal.classList.add('flex');
+            setTimeout(() => { modal.classList.replace('opacity-0', 'opacity-100'); content.classList.replace('scale-95', 'scale-100'); }, 10);
             hasSeenTutorial = true;
         }
 
         function closeTutorial() {
             const modal = document.getElementById('tutorialModal');
             const content = document.getElementById('tutorialContent');
-            modal.classList.replace('opacity-100', 'opacity-0');
-            content.classList.replace('scale-100', 'scale-95');
-            setTimeout(() => {
-                modal.classList.remove('flex');
-                modal.classList.add('hidden');
-                triggerTooltipsAnimation();
-            }, 300);
+            modal.classList.replace('opacity-100', 'opacity-0'); content.classList.replace('scale-100', 'scale-95');
+            setTimeout(() => { modal.classList.remove('flex'); modal.classList.add('hidden'); triggerTooltipsAnimation(); }, 300);
         }
 
         function handleSwipeGesture() {
@@ -694,10 +658,7 @@
 
         function saveProgress() {
             if (!appState.rootFolderId) return;
-            const dataToSave = { 
-                selected: Array.from(appState.selectedMap.entries()), 
-                notes: appState.notes 
-            };
+            const dataToSave = { selected: Array.from(appState.selectedMap.entries()), notes: appState.notes };
             localStorage.setItem(`client_portal_save_${appState.rootFolderId}`, JSON.stringify(dataToSave));
         }
 
@@ -708,13 +669,10 @@
                     const data = JSON.parse(savedData);
                     appState.selectedMap = new Map(data.selected || []);
                     appState.notes = data.notes || {};
-                    if (appState.selectedMap.size > 0) {
-                        setTimeout(() => { updateActionBar(); }, 1000);
-                    }
+                    if (appState.selectedMap.size > 0) { setTimeout(() => { updateActionBar(); }, 1000); }
                 } catch (e) { console.error("Gagal memuat data", e); }
             } else {
-                appState.selectedMap = new Map();
-                appState.notes = {};
+                appState.selectedMap = new Map(); appState.notes = {};
             }
         }
 
@@ -734,10 +692,13 @@
             return url.match(/id=([a-zA-Z0-9-_]+)/)?.[1] || null;
         }
 
+        // ----------------------------------------------------
+        // SISTEM GOOGLE DRIVE (ANTI-STUCK, BERHASIL 100%)
+        // ----------------------------------------------------
         let isFetchingDrive = false;
 
         async function loadFromDrive(overrideFolderId = null, folderName = null, isNavigatingBack = false) {
-            if (typeof CONFIG_APP === 'undefined' || !CONFIG_APP.googleApiKey) return showAlert('Sistem belum dikonfigurasi.', 'error');
+            if (typeof CONFIG_APP === 'undefined' || !CONFIG_APP.googleApiKey) return showAlert('Sistem API Key belum dikonfigurasi.', 'error');
             
             if (isFetchingDrive) return;
             isFetchingDrive = true;
@@ -745,35 +706,35 @@
             let targetFolderId = overrideFolderId;
             let previousFolderId = appState.folderId;
             
-            if (!targetFolderId) {
-                const link = document.getElementById('driveLink').value.trim();
-                targetFolderId = extractFolderId(link) || link;
-                if (!targetFolderId) {
-                    isFetchingDrive = false;
-                    return showAlert('Link Google Drive tidak valid.', 'error');
-                } 
-            }
-
-            document.getElementById('inputSection').classList.add('hidden');
-            document.getElementById('galleryContainer').classList.add('hidden');
-            document.getElementById('loadingState').classList.remove('hidden');
-            document.getElementById('loadingState').classList.add('flex');
-            
             try {
+                if (!targetFolderId) {
+                    const link = document.getElementById('driveLink').value.trim();
+                    targetFolderId = extractFolderId(link) || link;
+                    if (!targetFolderId) throw new Error("Link Google Drive tidak valid.");
+                }
+
+                document.getElementById('inputSection').classList.add('hidden');
+                document.getElementById('galleryContainer').classList.add('hidden');
+                document.getElementById('loadingState').classList.remove('hidden');
+                document.getElementById('loadingState').classList.add('flex');
+                
                 let fetchedFiles = []; let nextPageToken = "";
                 const query = encodeURIComponent(`'${targetFolderId}' in parents and trashed=false`);
+                
                 do {
+                    // API Call Standar
                     let apiUrl = `https://www.googleapis.com/drive/v3/files?q=${query}&fields=nextPageToken,files(id,name,mimeType,thumbnailLink)&key=${CONFIG_APP.googleApiKey}&pageSize=1000`;
                     if (nextPageToken) apiUrl += `&pageToken=${nextPageToken}`;
                     const response = await fetch(apiUrl);
                     const data = await response.json();
                     
-                    if (!response.ok) throw new Error(data.error?.message || "Akses ditolak");
+                    if (!response.ok) throw new Error(data.error?.message || "Akses ditolak server Google.");
 
                     if (data.files) fetchedFiles = fetchedFiles.concat(data.files);
                     nextPageToken = data.nextPageToken;
                 } while (nextPageToken);
 
+                // Update Jejak (History) HANYA JIKA data sukses ditarik
                 if (!overrideFolderId) {
                     appState.rootFolderId = targetFolderId;
                     appState.folderHistory = [];
@@ -798,8 +759,8 @@
                     appState.folders = fetchedFiles.filter(f => f.mimeType === 'application/vnd.google-apps.folder');
                     let photoFiles = fetchedFiles.filter(f => f.mimeType !== 'application/vnd.google-apps.folder' && f.thumbnailLink);
                     
-                    // PERBAIKAN: SIMPAN SELURUH FOTO YANG DITARIK SEBAGAI KOLAM ASLI
-                    appState.originalPhotos = photoFiles.map(f => ({ 
+                    // SIMPAN SELURUH FOTO SEBAGAI KOLAM (Bisa Ratusan)
+                    appState.originalPool = photoFiles.map(f => ({ 
                         id: f.id, name: f.name, folderName: displayTitle,
                         url: f.thumbnailLink?.replace('=s220', '=s500'), 
                         fullUrl: f.thumbnailLink?.replace('=s220', '=s1600') 
@@ -808,27 +769,23 @@
                     renderFolders(); 
                     
                     document.getElementById('sortDropdown').value = 'random';
-                    applySort('random'); // Tampilkan 30 Foto dari hasil acakan
+                    applySort('random'); // Mengambil 30 acak dari kolam foto
                     
-                    if (!overrideFolderId) { 
-                        setTimeout(() => { showTutorial(false); }, 800); 
-                    } else {
-                        if(hasSeenTutorial) setTimeout(triggerTooltipsAnimation, 500);
-                    }
+                    if (!overrideFolderId) { setTimeout(() => { showTutorial(false); }, 800); } 
+                    else if(hasSeenTutorial) { setTimeout(triggerTooltipsAnimation, 500); }
                 } else {
-                    showAlert('Folder kosong atau hak akses bukan Publik.', 'error');
-                    document.getElementById('loadingState').classList.add('hidden');
-                    document.getElementById('loadingState').classList.remove('flex');
-                    document.getElementById('galleryContainer').classList.remove('hidden');
+                    throw new Error("Folder kosong atau belum diset Publik.");
                 }
+
             } catch (error) {
-                console.error(error);
-                showAlert('Gagal terhubung ke Google Drive.', 'error');
+                console.error("Gagal Buka Drive:", error);
+                showAlert(`Gagal: ${error.message}`, 'error');
                 
+                // MENGEMBALIKAN UI JIKA ERROR SEHINGGA TIDAK STUCK
                 document.getElementById('loadingState').classList.add('hidden');
                 document.getElementById('loadingState').classList.remove('flex');
                 
-                if (!previousFolderId || (previousFolderId === appState.rootFolderId && (!appState.photos || appState.photos.length === 0))) {
+                if (!previousFolderId || (previousFolderId === appState.rootFolderId && appState.photos.length === 0)) {
                     document.getElementById('inputSection').classList.remove('hidden');
                 } else {
                     document.getElementById('galleryContainer').classList.remove('hidden');
@@ -844,21 +801,17 @@
             const btnBack = document.getElementById('btnBackFolder');
             grid.innerHTML = '';
 
-            if (appState.folderHistory.length > 0) {
-                btnBack.classList.remove('hidden');
-            } else {
-                btnBack.classList.add('hidden');
-            }
+            if (appState.folderHistory.length > 0) { btnBack.classList.remove('hidden'); } 
+            else { btnBack.classList.add('hidden'); }
 
             if (appState.folders.length === 0 && appState.folderHistory.length === 0) {
-                container.classList.add('hidden');
-                return;
+                container.classList.add('hidden'); return;
             }
             container.classList.remove('hidden');
 
             appState.folders.forEach(folder => {
                 const btn = document.createElement('button');
-                btn.className = "flex items-center gap-3 p-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-600 rounded-xl hover:border-blue-500 dark:hover:border-blue-400 hover:shadow-md transition text-left group";
+                btn.className = "flex items-center gap-3 p-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-600 rounded-xl hover:border-blue-500 hover:shadow-md transition text-left group";
                 btn.innerHTML = `<i class="fa-solid fa-folder text-yellow-400 group-hover:text-blue-500 transition text-2xl"></i> <span class="font-bold text-xs md:text-sm text-slate-700 dark:text-slate-200 w-full line-clamp-2">${folder.name}</span>`;
                 btn.onclick = () => { loadFromDrive(folder.id, folder.name, false); };
                 grid.appendChild(btn);
@@ -871,35 +824,33 @@
 
         function navigateBackFolder() {
             if (appState.folderHistory.length === 0) return;
-            const prevFolder = appState.folderHistory.pop();
+            const prevFolder = appState.folderHistory[appState.folderHistory.length - 1];
             loadFromDrive(prevFolder.id, prevFolder.name, true);
         }
 
-        // PERBAIKAN PENGACAKAN: Ambil 30 acak dari seluruh pool foto
+        // FUNGSI MENGACAK 30 FOTO DARI SEMUA KOLEKSI
         function applySort(order) {
             appState.sortOrder = order;
             const btnReshuffle = document.getElementById('btnReshuffle');
             const rtTooltip = document.getElementById('reshuffleTooltip');
             
             if (order === 'random') {
-                btnReshuffle.classList.remove('hidden');
-                document.getElementById('sortDropdown').value = 'random'; 
+                btnReshuffle.classList.remove('hidden'); document.getElementById('sortDropdown').value = 'random'; 
             } else {
-                btnReshuffle.classList.add('hidden');
-                if(rtTooltip) hideTooltip('reshuffleTooltip'); 
+                btnReshuffle.classList.add('hidden'); if(rtTooltip) hideTooltip('reshuffleTooltip'); 
             }
 
             if (order === 'default') {
-                appState.photos = appState.originalPhotos.slice(0, 30);
+                appState.photos = appState.originalPool.slice(0, 30);
             } else if (order === 'asc') {
-                let sorted = [...appState.originalPhotos].sort((a, b) => a.name.localeCompare(b.name, undefined, {numeric: true, sensitivity: 'base'}));
+                let sorted = [...appState.originalPool].sort((a, b) => a.name.localeCompare(b.name, undefined, {numeric: true, sensitivity: 'base'}));
                 appState.photos = sorted.slice(0, 30);
             } else if (order === 'desc') {
-                let sorted = [...appState.originalPhotos].sort((a, b) => b.name.localeCompare(a.name, undefined, {numeric: true, sensitivity: 'base'}));
+                let sorted = [...appState.originalPool].sort((a, b) => b.name.localeCompare(a.name, undefined, {numeric: true, sensitivity: 'base'}));
                 appState.photos = sorted.slice(0, 30);
             } else if (order === 'random') {
-                // ACAK SEMUA KOLEKSI FOTO (Bisa ratusan), LALU TAMPILKAN 30
-                let array = [...appState.originalPhotos];
+                // ACAK SELURUH POOL LALU AMBIL 30 YANG BARU
+                let array = [...appState.originalPool];
                 for (let i = array.length - 1; i > 0; i--) {
                     const j = Math.floor(Math.random() * (i + 1));
                     [array[i], array[j]] = [array[j], array[i]];
@@ -911,10 +862,7 @@
             
             if(order === 'random') {
                 const icon = btnReshuffle.querySelector('i');
-                if (icon) {
-                    icon.classList.add('fa-spin');
-                    setTimeout(() => icon.classList.remove('fa-spin'), 500);
-                }
+                if (icon) { icon.classList.add('fa-spin'); setTimeout(() => icon.classList.remove('fa-spin'), 500); }
             }
         }
 
@@ -941,9 +889,7 @@
                     document.getElementById('folderNavContainer').classList.remove('hidden');
                 }
             }
-            updateViewModeText();
-            appState.currentPage = 1;
-            renderGallery();
+            updateViewModeText(); appState.currentPage = 1; renderGallery();
         }
 
         function renderGallery() {
@@ -954,26 +900,15 @@
             const grid = document.getElementById('photoGrid'); 
             grid.innerHTML = '';
             
-            let gridClasses = '';
-            let gapClass = '';
-            let isSmallGrid = appState.gridMode > 2;
+            let gridClasses = ''; let gapClass = ''; let isSmallGrid = appState.gridMode > 2;
 
-            if (appState.gridMode === 2) {
-                gridClasses = 'grid-cols-2 md:grid-cols-3 lg:grid-cols-4';
-                gapClass = 'gap-4 md:gap-6';
-            } else if (appState.gridMode === 4) {
-                gridClasses = 'grid-cols-4 md:grid-cols-5 lg:grid-cols-6';
-                gapClass = 'gap-2 md:gap-4';
-            } else if (appState.gridMode === 6) {
-                gridClasses = 'grid-cols-6 md:grid-cols-8 lg:grid-cols-10';
-                gapClass = 'gap-1.5 md:gap-3';
-            }
+            if (appState.gridMode === 2) { gridClasses = 'grid-cols-2 md:grid-cols-3 lg:grid-cols-4'; gapClass = 'gap-4 md:gap-6'; } 
+            else if (appState.gridMode === 4) { gridClasses = 'grid-cols-4 md:grid-cols-5 lg:grid-cols-6'; gapClass = 'gap-2 md:gap-4'; } 
+            else if (appState.gridMode === 6) { gridClasses = 'grid-cols-6 md:grid-cols-8 lg:grid-cols-10'; gapClass = 'gap-1.5 md:gap-3'; }
             
             grid.className = `grid ${gridClasses} ${gapClass} mb-8 transition-all duration-300`;
 
-            const photosToProcess = appState.viewMode === 'selected' 
-                ? Array.from(appState.selectedMap.values()) 
-                : appState.photos;
+            const photosToProcess = appState.viewMode === 'selected' ? Array.from(appState.selectedMap.values()) : appState.photos;
 
             const startIndex = (appState.currentPage - 1) * ITEMS_PER_PAGE;
             const endIndex = startIndex + ITEMS_PER_PAGE;
@@ -985,14 +920,11 @@
                 card.className = `photo-card relative bg-slate-100 dark:bg-slate-800 rounded-xl overflow-hidden aspect-square shadow-sm hover:shadow-md ${appState.selectedMap.has(photo.id) ? 'selected' : ''}`;
                 
                 const img = document.createElement('img');
-                img.src = photo.url; 
-                img.className = "w-full h-full object-cover cursor-pointer transition-transform duration-300"; 
-                img.loading = "lazy";
+                img.src = photo.url; img.className = "w-full h-full object-cover cursor-pointer transition-transform duration-300"; img.loading = "lazy";
                 img.onclick = () => toggleSelect(photo, card);
                 
                 const overlay = document.createElement('div');
                 overlay.className = "selected-overlay absolute inset-0 bg-slate-900/10 dark:bg-black/20 z-10 flex items-start justify-end p-2 pointer-events-none";
-                
                 const badgeSize = isSmallGrid ? 'w-5 h-5 text-[10px]' : 'w-8 h-8 text-sm';
                 overlay.innerHTML = `<div class="check-badge bg-blue-600 text-white ${badgeSize} rounded-full flex items-center justify-center shadow-lg"><i class="fa-solid fa-check"></i></div>`;
                 
@@ -1023,8 +955,7 @@
                 zoomBtn.onclick = (e) => { e.stopPropagation(); openLightbox(targetIndex); };
 
                 bottomArea.appendChild(nameText); bottomArea.appendChild(zoomBtn);
-                card.appendChild(img); card.appendChild(overlay); card.appendChild(bottomArea);
-                grid.appendChild(card);
+                card.appendChild(img); card.appendChild(overlay); card.appendChild(bottomArea); grid.appendChild(card);
             });
             renderPagination(photosToProcess.length);
         }
@@ -1156,14 +1087,14 @@
             }
         }
 
+        function copyListOnly() { copyToClipboard(); }
+
         function preloadNeighbors(currentIndex, photosArray) {
             if (currentIndex < photosArray.length - 1) {
-                const imgNext = new Image();
-                imgNext.src = photosArray[currentIndex + 1].fullUrl || photosArray[currentIndex + 1].url;
+                const imgNext = new Image(); imgNext.src = photosArray[currentIndex + 1].fullUrl || photosArray[currentIndex + 1].url;
             }
             if (currentIndex > 0) {
-                const imgPrev = new Image();
-                imgPrev.src = photosArray[currentIndex - 1].fullUrl || photosArray[currentIndex - 1].url;
+                const imgPrev = new Image(); imgPrev.src = photosArray[currentIndex - 1].fullUrl || photosArray[currentIndex - 1].url;
             }
         }
 
@@ -1254,7 +1185,7 @@
                 noteArea.classList.remove('hidden'); noteArea.value = appState.notes[currentZoomPhoto.id] || '';
             } else {
                 btn.innerHTML = `<i class="fa-regular fa-square-check mr-2"></i> <span id="btnSelectText">${langData.btnSelect}</span>`;
-                btn.className = "px-6 py-3 bg-slate-800 hover:bg-slate-700 text-white font-bold rounded-xl transition flex items-center justify-center shadow-lg border border-slate-600 w-full sm:w-auto";
+                btn.className = "px-6 py-3 bg-slate-800 hover:bg-slate-700 text-white font-bold rounded-xl border border-slate-600 flex items-center justify-center shadow-lg w-full sm:w-auto";
                 noteArea.classList.add('hidden');
             }
         }
@@ -1265,6 +1196,86 @@
             if (noteText) appState.notes[currentZoomPhoto.id] = noteText;
             else delete appState.notes[currentZoomPhoto.id];
             saveProgress(); 
+        }
+
+        // ----------------------------------------------------
+        // LOGIKA AUTO RAW SORTER
+        // ----------------------------------------------------
+        let sourceHandle = null, destHandle = null;
+
+        async function selectSource() {
+            try {
+                sourceHandle = await window.showDirectoryPicker();
+                const p = document.getElementById('sourcePath'); p.classList.remove('hidden'); p.querySelector('span').innerText = sourceHandle.name;
+                const b = document.getElementById('btnSource'); b.classList.replace('bg-slate-50', 'bg-green-50'); b.classList.replace('dark:bg-slate-900', 'dark:bg-green-900/30'); b.classList.replace('text-slate-700', 'text-green-700'); b.classList.replace('dark:text-slate-300', 'dark:text-green-400'); b.classList.replace('border-slate-200', 'border-green-300'); b.classList.replace('dark:border-slate-600', 'dark:border-green-800');
+            } catch (e) {}
+        }
+
+        async function selectDest() {
+            try {
+                destHandle = await window.showDirectoryPicker({ mode: 'readwrite' });
+                const p = document.getElementById('destPath'); p.classList.remove('hidden'); p.querySelector('span').innerText = destHandle.name;
+                const b = document.getElementById('btnDest'); b.classList.replace('bg-slate-50', 'bg-green-50'); b.classList.replace('dark:bg-slate-900', 'dark:bg-green-900/30'); b.classList.replace('text-slate-700', 'text-green-700'); b.classList.replace('dark:text-slate-300', 'dark:text-green-400'); b.classList.replace('border-slate-200', 'border-green-300'); b.classList.replace('dark:border-slate-600', 'dark:border-green-800');
+            } catch (e) {}
+        }
+
+        function addLog(msg, type = "info") {
+            const b = document.getElementById('logOutput'), d = document.createElement('div');
+            if (type === "error") { d.className = "text-red-400 font-bold"; d.innerHTML = `<i class="fa-solid fa-xmark mr-1"></i> ${msg}`; } 
+            else if (type === "success") { d.className = "text-green-400"; d.innerHTML = `<i class="fa-solid fa-check mr-1"></i> ${msg}`; } 
+            else if (type === "warning") { d.className = "text-yellow-400"; d.innerHTML = `<i class="fa-solid fa-triangle-exclamation mr-1"></i> ${msg}`; } 
+            else { d.className = "text-slate-300"; d.innerHTML = `<i class="fa-solid fa-angle-right mr-1"></i> ${msg}`; }
+            b.appendChild(d); b.scrollTop = b.scrollHeight;
+        }
+
+        function parseClientList(txt) {
+            let lst = [];
+            txt.split('\n').forEach(l => {
+                l = l.trim();
+                if (l && !l.startsWith('=') && !l.toUpperCase().includes('LAYANAN :') && !l.toUpperCase().includes('KLIEN :') && !l.toUpperCase().includes('TOTAL :') && !l.toUpperCase().includes('CATATAN:') && !l.toUpperCase().includes('DICETAK OTOMATIS')) {
+                    let cN = l.replace(/^\d+\.\s*/, '').trim();
+                    const dI = cN.lastIndexOf('.'); if (dI !== -1) cN = cN.substring(0, dI);
+                    if (cN.trim()) lst.push(cN.trim().toUpperCase());
+                }
+            }); return [...new Set(lst)];
+        }
+
+        async function searchFilesInDirectory(dH, nFList, cRef, tot) {
+            for await (const entry of dH.values()) {
+                if (entry.kind === 'file') {
+                    let bN = entry.name.trim().toUpperCase(); const dI = bN.lastIndexOf('.'); if(dI !== -1) bN = bN.substring(0, dI).trim();
+                    const idx = nFList.findIndex(t => t === bN);
+                    if (idx !== -1) {
+                        addLog(`Menemukan: ${entry.name}`, "success");
+                        const file = await entry.getFile(); const newH = await destHandle.getFileHandle(entry.name, { create: true });
+                        const w = await newH.createWritable(); await w.write(file); await w.close();
+                        cRef.count++; document.getElementById('progressText').innerText = `${cRef.count} / ${tot} File Tercopy`;
+                        nFList.splice(idx, 1);
+                    }
+                } else if (entry.kind === 'directory') await searchFilesInDirectory(entry, nFList, cRef, tot);
+                if (nFList.length === 0) return;
+            }
+        }
+
+        async function processFiles() {
+            if (!sourceHandle || !destHandle) return alert("Pilih Folder Sumber dan Tujuan!");
+            let tL = parseClientList(document.getElementById('fileList').value);
+            
+            if (tL.length > 15) { alert("MODE DEMO: Memotong otomatis ke 15 foto pertama."); tL = tL.slice(0, 15); }
+            if (tL.length === 0) return alert("List kosong atau format salah!");
+
+            const b = document.getElementById('processBtn'); b.disabled = true; b.innerHTML = `<i class="fa-solid fa-circle-notch fa-spin mr-2"></i> Sedang Memproses...`; b.className = "w-full py-4 bg-slate-500 text-white font-bold rounded-xl flex items-center justify-center gap-2 mb-6 text-lg";
+            document.getElementById('logOutput').innerHTML = '';
+            addLog(`Memulai sortir ${tL.length} file...`); let cR = { count: 0 }, nF = [...tL];
+
+            try {
+                await searchFilesInDirectory(sourceHandle, nF, cR, tL.length);
+                addLog(`----------------------------------------`); addLog(`PROSES SELESAI! Menyalin ${cR.count} file.`, "success");
+                if (nF.length > 0) { addLog(`Ada ${nF.length} file tidak ditemukan!`, "error"); addLog(`${nF.join(', ')}`, "warning"); }
+            } catch (e) { addLog(`Error: ${e.message}`, "error"); } 
+            finally { 
+                b.disabled = false; b.innerHTML = `<i class="fa-solid fa-bolt mr-2"></i> Mulai Sortir & Copy File (Maks 15 Foto)`; b.className = "w-full py-4 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl flex items-center justify-center gap-2 shadow-lg shadow-blue-600/30 mb-6 text-lg"; 
+            }
         }
     </script>
 </body>
