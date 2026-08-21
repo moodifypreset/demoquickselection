@@ -723,8 +723,18 @@
                 do {
                     let url = `https://www.googleapis.com/drive/v3/files?q=${q}&fields=nextPageToken,files(id,name,mimeType,thumbnailLink)&key=${CONFIG_APP.googleApiKey}&pageSize=1000`;
                     if (token) url += `&pageToken=${token}`;
-                    const res = await fetch(url); const data = await res.json();
-                    if (data.files) fetched = fetched.concat(data.files); token = data.nextPageToken;
+                    
+                    const res = await fetch(url); 
+                    const data = await res.json();
+                    
+                    // PENYARINGAN ERROR BARU: 
+                    // Menangkap error jika Google menolak API Key atau Link Drive
+                    if (!res.ok) {
+                        throw new Error(data.error?.message || "Akses Ditolak oleh Server Google");
+                    }
+
+                    if (data.files) fetched = fetched.concat(data.files); 
+                    token = data.nextPageToken;
                 } while (token);
 
                 if (fetched.length > 0 || appState.folderHistory.length > 0) {
@@ -739,8 +749,17 @@
                     
                     renderFolders(); document.getElementById('sortDropdown').value = 'random'; applySort('random');
                     if (!overrideId) setTimeout(() => { showTutorial(false); }, 800); else if(hasSeenTutorial) setTimeout(triggerTooltipsAnimation, 500);
-                } else { showAlert('Folder kosong/bukan Publik.', 'error'); document.getElementById('loadingState').classList.add('hidden'); }
-            } catch (e) { showAlert('Gagal terhubung ke Drive.', 'error'); document.getElementById('loadingState').classList.add('hidden'); }
+                } else { 
+                    showAlert('Folder kosong atau Hak Akses Drive belum "Siapa saja yang memiliki tautan" (Viewer).', 'error'); 
+                    document.getElementById('loadingState').classList.add('hidden'); 
+                }
+            } catch (e) { 
+                console.error("Gagal terhubung ke Drive:", e);
+                
+                // PERUBAHAN: Menampilkan pesan error asli di layar
+                showAlert(`Gagal: ${e.message}`, 'error'); 
+                document.getElementById('loadingState').classList.add('hidden'); 
+            }
         }
 
         function renderFolders() {
