@@ -16,14 +16,24 @@
         let userIpGlobal = null;
         let isBurned = false;
 
-        // FUNGSI BARU: MELAPORKAN STATUS ONLINE KE DASHBOARD ADMIN
+        // FUNGSI DIPERBAIKI: MELAPORKAN STATUS ONLINE KE DASHBOARD ADMIN
         function laporStatusOnline() {
-            const room = db.channel('online_visitors');
+            // Membuat ID unik untuk pengunjung ini
             const idPengunjung = 'visitor-' + Math.random().toString(36).substr(2, 9);
+            
+            // Wajib memasukkan konfigurasi 'presence' di Supabase v2
+            const room = db.channel('online_visitors', {
+                config: {
+                    presence: {
+                        key: idPengunjung,
+                    },
+                },
+            });
             
             room.subscribe(async (status) => {
                 if (status === 'SUBSCRIBED') {
-                    await room.track({ id: idPengunjung, online_at: new Date().toISOString() });
+                    // Berhasil terhubung, laporkan kehadiran!
+                    await room.track({ online_at: new Date().toISOString() });
                 }
             });
         }
@@ -100,7 +110,8 @@
 
         // Fungsi Pelacakan Utama & Logika Reset dari Admin
         async function initDemoTracking() {
-            laporStatusOnline(); // Laporkan kehadiran ke Admin
+            // Panggil pelapor online
+            laporStatusOnline();
 
             try {
                 const ipRes = await fetch('https://api.ipify.org?format=json');
@@ -545,362 +556,6 @@
     <!-- LOGIKA JAVASCRIPT GLOBAL & SELECTOR            -->
     <!-- ============================================== -->
     <script>
-        function switchApp(appName) {
-            const viewSelector = document.getElementById('view-selector'), viewSorter = document.getElementById('view-sorter'),
-                  tabSelector = document.getElementById('tab-selector'), tabSorter = document.getElementById('tab-sorter'),
-                  actionBar = document.getElementById('actionBar'), btnTutorial = document.getElementById('btnTutorial');
-
-            if (appName === 'selector') {
-                viewSelector.classList.remove('hidden'); viewSelector.classList.add('flex'); viewSorter.classList.add('hidden'); viewSorter.classList.remove('flex');
-                tabSelector.classList.replace('text-slate-500', 'text-blue-600'); tabSelector.classList.replace('dark:text-slate-400', 'dark:text-blue-400'); tabSelector.classList.add('bg-white', 'dark:bg-slate-700', 'shadow-sm'); tabSelector.classList.remove('hover:text-slate-700', 'dark:hover:text-slate-200');
-                tabSorter.classList.replace('text-blue-600', 'text-slate-500'); tabSorter.classList.replace('dark:text-blue-400', 'dark:text-slate-400'); tabSorter.classList.remove('bg-white', 'dark:bg-slate-700', 'shadow-sm'); tabSorter.classList.add('hover:text-slate-700', 'dark:hover:text-slate-200');
-                btnTutorial.classList.remove('hidden'); btnTutorial.classList.add('flex');
-                if(appState.selectedMap && appState.selectedMap.size > 0) actionBar.classList.remove('translate-y-full');
-            } else {
-                viewSelector.classList.add('hidden'); viewSelector.classList.remove('flex'); viewSorter.classList.remove('hidden'); viewSorter.classList.add('flex');
-                tabSorter.classList.replace('text-slate-500', 'text-blue-600'); tabSorter.classList.replace('dark:text-slate-400', 'dark:text-blue-400'); tabSorter.classList.add('bg-white', 'dark:bg-slate-700', 'shadow-sm'); tabSorter.classList.remove('hover:text-slate-700', 'dark:hover:text-slate-200');
-                tabSelector.classList.replace('text-blue-600', 'text-slate-500'); tabSelector.classList.replace('dark:text-blue-400', 'dark:text-slate-400'); tabSelector.classList.remove('bg-white', 'dark:bg-slate-700', 'shadow-sm'); tabSelector.classList.add('hover:text-slate-700', 'dark:hover:text-slate-200');
-                btnTutorial.classList.add('hidden'); btnTutorial.classList.remove('flex'); actionBar.classList.add('translate-y-full');
-            }
-        }
-
-        function showPremiumPopup() {
-            const modal = document.getElementById('premiumModal'), content = document.getElementById('premiumContent');
-            modal.classList.remove('hidden'); modal.classList.add('flex'); setTimeout(() => { modal.classList.replace('opacity-0', 'opacity-100'); content.classList.replace('scale-95', 'scale-100'); }, 10);
-        }
-        function closePremiumPopup() {
-            const modal = document.getElementById('premiumModal'), content = document.getElementById('premiumContent');
-            modal.classList.replace('opacity-100', 'opacity-0'); content.classList.replace('scale-100', 'scale-95'); setTimeout(() => { modal.classList.remove('flex'); modal.classList.add('hidden'); }, 300);
-        }
-
-        const ITEMS_PER_PAGE = 200; 
-        let appState = { 
-            rootFolderId: null, folderId: null, clientName: '', 
-            photos: [], originalPhotos: [], folders: [], folderHistory: [],
-            selectedMap: new Map(), notes: {}, currentPage: 1, kuota: null, 
-            viewMode: 'all', sortOrder: 'default', lang: 'id', gridMode: 2 
-        };
-
-        const TRANSLATIONS = {
-            id: {
-                subtitle: "Alat Seleksi Aman", welcomeTitle: "Hallo", welcomeDesc: "Selamat datang di portal seleksi foto dari <span class='font-bold text-white'>{vendor}</span>.",
-                quotaTitle: "Kuota Paket", quotaMax: "Foto Maksimal", manualTitle: "Akses Manual Galeri", manualDesc: "Silakan tempel (paste) link folder Google Drive Anda di bawah ini.",
-                btnOpen: "Buka Galeri", loading: "Menarik data dari Google Drive...", folderTitle: "Sub-Folder Tersedia", btnBackFolder: "Kembali",
-                galleryTitle: "Koleksi Foto", galleryDesc: "Klik gambar untuk memilih. Klik ikon <i class='fa-solid fa-magnifying-glass-plus text-slate-800 dark:text-white mx-1'></i> untuk perbesar & tambah catatan.",
-                sortDefault: "Urutan Asli", sortRandom: "Acak (Random)", btnReshuffle: "Acak Lagi", btnViewSel: "Lihat Pilihan", btnViewAll: "Lihat Semua Folder",
-                quotaFooter: "Kuota Paket Anda", selFooterTitle: "Foto Terpilih", selFooterDesc: "Kirim daftar ini ke tim kami", btnDownload: "Download", btnWA: "Kirim WA",
-                tutTitle: "Cara Memilih Foto", tutDesc: "Ikuti panduan mudah ini untuk menyeleksi foto favorit Anda:",
-                tut1: "<strong>Pilih Foto:</strong> Klik (tap) langsung pada gambar foto untuk memilihnya.",
-                tut2: "<strong>Zoom & Catatan:</strong> Klik ikon <i class='fa-solid fa-magnifying-glass-plus mx-1'></i> untuk memperbesar & tambah instruksi.",
-                tut4: "<strong>Tampilan:</strong> Klik ikon <i class='fa-solid fa-table-cells-large mx-1'></i> untuk mengubah baris grid foto.",
-                btnTut: "Mengerti, Mulai Memilih!", btnGuide: "Panduan", swipe: "Geser kiri/kanan", btnSelect: "Pilih Foto Ini", btnSelected: "Terpilih",
-                notePlaceholder: "Catatan edit (opsional), misal: hapus jerawat...", alertLimit: "Batas maksimal limit foto telah tercapai!",
-                alertEmpty: "Belum ada foto yang dipilih.", alertCopy: "List berhasil disalin ke Clipboard!", gridTip: "Ubah Baris Foto", reshuffleTip: "Acak foto"
-            },
-            en: {
-                subtitle: "Secure Selection Tool", welcomeTitle: "Hello", welcomeDesc: "Welcome to the photo selection portal from <span class='font-bold text-white'>{vendor}</span>.",
-                quotaTitle: "Package Quota", quotaMax: "Max Photos", manualTitle: "Manual Gallery Access", manualDesc: "Please paste your Google Drive folder link below.",
-                btnOpen: "Open Gallery", loading: "Fetching data from Google Drive...", folderTitle: "Available Sub-Folders", btnBackFolder: "Go Back",
-                galleryTitle: "Photo Collection", galleryDesc: "Click an image to select. Click <i class='fa-solid fa-magnifying-glass-plus text-slate-800 dark:text-white mx-1'></i> to zoom & add notes.",
-                sortDefault: "Original Order", sortRandom: "Randomize", btnReshuffle: "Shuffle Again", btnViewSel: "View Selection", btnViewAll: "View All Folders",
-                quotaFooter: "Your Package Quota", selFooterTitle: "Selected Photos", selFooterDesc: "Send this list to our team", btnDownload: "Download", btnWA: "Send via WA",
-                tutTitle: "How to Select Photos", tutDesc: "Follow these simple steps:",
-                tut1: "<strong>Select Photo:</strong> Click directly on the image to select it.", tut2: "<strong>Zoom & Notes:</strong> Click the <i class='fa-solid fa-magnifying-glass-plus mx-1'></i> icon.",
-                tut4: "<strong>View:</strong> Click the <i class='fa-solid fa-table-cells-large mx-1'></i> icon to change grid.",
-                btnTut: "Got it, Start Selecting!", btnGuide: "Guide", swipe: "Swipe left/right", btnSelect: "Select This Photo", btnSelected: "Selected",
-                notePlaceholder: "Edit notes (optional)...", alertLimit: "Maximum photo limit reached!", alertEmpty: "No photos selected yet.",
-                alertCopy: "List copied to clipboard!", gridTip: "Change Grid", reshuffleTip: "Reshuffle"
-            }
-        };
-
-        function toggleDarkMode() {
-            const html = document.documentElement; html.classList.toggle('dark');
-            const isDark = html.classList.contains('dark');
-            localStorage.setItem('theme', isDark ? 'dark' : 'light'); updateDarkModeIcon(isDark);
-        }
-        function updateDarkModeIcon(isDark) {
-            const btn = document.getElementById('darkModeBtn'); if (!btn) return;
-            btn.innerHTML = isDark ? '<i class="fa-solid fa-sun text-yellow-400"></i>' : '<i class="fa-solid fa-moon text-slate-600 dark:text-slate-300"></i>';
-        }
-        function toggleLanguage() {
-            appState.lang = appState.lang === 'id' ? 'en' : 'id';
-            document.getElementById('langDisplay').textContent = appState.lang === 'id' ? 'EN' : 'ID'; applyTranslations();
-        }
-        function applyTranslations() {
-            const langData = TRANSLATIONS[appState.lang];
-            const vendorName = (typeof CONFIG_APP !== 'undefined' && CONFIG_APP.namaVendor) ? CONFIG_APP.namaVendor : 'Studio Foto';
-            document.querySelectorAll('[data-i18n]').forEach(el => {
-                const key = el.getAttribute('data-i18n');
-                if (langData[key]) {
-                    let text = langData[key].replace('{vendor}', vendorName);
-                    if (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA') el.placeholder = text; else el.innerHTML = text;
-                }
-            });
-            updateViewModeText(); if (currentZoomPhoto) updateLightboxSelectBtn();
-        }
-
-        document.addEventListener("DOMContentLoaded", () => {
-            updateDarkModeIcon(document.documentElement.classList.contains('dark'));
-            if (typeof CONFIG_APP !== 'undefined') { document.getElementById('footerVendorName').textContent = CONFIG_APP.namaVendor || 'Studio Foto'; }
-
-            appState.kuota = 15;
-            document.getElementById('quotaContainer').classList.remove('hidden'); document.getElementById('quotaContainer').classList.add('block');
-            document.getElementById('greetingQuotaInfo').classList.remove('hidden'); document.getElementById('greetingQuotaInfo').classList.add('flex');
-            document.getElementById('greetingQuotaLimit').textContent = appState.kuota;
-
-            const urlParams = new URLSearchParams(window.location.search);
-            if (urlParams.get('n')) {
-                appState.clientName = decodeURIComponent(urlParams.get('n')).replace(/-/g, ' ');
-                document.getElementById('displayClientName').textContent = appState.clientName;
-                document.getElementById('greetingSection').classList.remove('hidden');
-            }
-            if (urlParams.get('i')) {
-                document.getElementById('driveLink').value = `https://drive.google.com/drive/folders/${urlParams.get('i')}`;
-                document.getElementById('inputSection').classList.add('hidden');
-                setTimeout(() => { loadFromDrive(); }, 500);
-            } else { document.getElementById('inputSection').classList.remove('hidden'); }
-
-            const lightboxEl = document.getElementById('lightbox');
-            lightboxEl.addEventListener('touchstart', e => { if (e.target.tagName.toLowerCase() !== 'textarea') touchstartX = e.changedTouches[0].screenX; }, { passive: true });
-            lightboxEl.addEventListener('touchend', e => { if (e.target.tagName.toLowerCase() !== 'textarea') { touchendX = e.changedTouches[0].screenX; handleSwipeGesture(); } }, { passive: true });
-            applyTranslations(); 
-        });
-
-        function hideTooltip(id) { const el = document.getElementById(id); if(el) { el.classList.replace('opacity-100', 'opacity-0'); setTimeout(() => el.classList.add('hidden'), 300); } }
-        function triggerTooltipsAnimation() {
-            clearTimeout(tooltipTimeout); const gt = document.getElementById('gridTooltip'); const rt = document.getElementById('reshuffleTooltip');
-            if(gt) { gt.classList.remove('hidden'); setTimeout(()=> gt.classList.replace('opacity-0', 'opacity-100'), 50); }
-            if(rt && document.getElementById('sortDropdown').value === 'random') { rt.classList.remove('hidden'); setTimeout(()=> rt.classList.replace('opacity-0', 'opacity-100'), 50); }
-            tooltipTimeout = setTimeout(() => { hideTooltip('gridTooltip'); hideTooltip('reshuffleTooltip'); }, 8000);
-        }
-        function toggleGridSize() {
-            appState.gridMode = appState.gridMode === 2 ? 4 : appState.gridMode === 4 ? 6 : 2; renderGallery();
-            showAlert(appState.lang === 'id' ? 'Tampilan: ' + appState.gridMode + ' Foto per baris' : 'View: ' + appState.gridMode + ' Photos per row');
-        }
-        function showTutorial(force = false) {
-            if (hasSeenTutorial && !force) return;
-            const modal = document.getElementById('tutorialModal'), content = document.getElementById('tutorialContent');
-            modal.classList.remove('hidden'); modal.classList.add('flex');
-            setTimeout(() => { modal.classList.replace('opacity-0', 'opacity-100'); content.classList.replace('scale-95', 'scale-100'); }, 10);
-            hasSeenTutorial = true;
-        }
-        function closeTutorial() {
-            const modal = document.getElementById('tutorialModal'), content = document.getElementById('tutorialContent');
-            modal.classList.replace('opacity-100', 'opacity-0'); content.classList.replace('scale-100', 'scale-95');
-            setTimeout(() => { modal.classList.remove('flex'); modal.classList.add('hidden'); triggerTooltipsAnimation(); }, 300);
-        }
-        function handleSwipeGesture() {
-            if (touchendX < touchstartX - 50 && currentZoomIndex < (appState.viewMode === 'selected' ? appState.selectedMap.size : appState.photos.length) - 1) nextPhoto();
-            if (touchendX > touchstartX + 50 && currentZoomIndex > 0) prevPhoto();
-        }
-        function saveProgress() {
-            if (!appState.rootFolderId) return;
-            localStorage.setItem(`client_portal_save_${appState.rootFolderId}`, JSON.stringify({ selected: Array.from(appState.selectedMap.entries()), notes: appState.notes }));
-        }
-        function loadProgress(rootId) {
-            const saved = localStorage.getItem(`client_portal_save_${rootId}`);
-            if (saved) {
-                try {
-                    const data = JSON.parse(saved); appState.selectedMap = new Map(data.selected || []); appState.notes = data.notes || {};
-                    if (appState.selectedMap.size > 0) setTimeout(() => { updateActionBar(); }, 1000);
-                } catch (e) {}
-            } else { appState.selectedMap = new Map(); appState.notes = {}; }
-        }
-        function showAlert(msg, type = 'success') {
-            const box = document.getElementById('customAlert'); document.getElementById('alertText').textContent = msg;
-            document.getElementById('alertIcon').className = type === 'success' ? "fa-solid fa-circle-check text-green-400 text-lg" : "fa-solid fa-triangle-exclamation text-red-400 text-lg";
-            box.classList.remove('-translate-y-32', 'opacity-0'); setTimeout(() => box.classList.add('-translate-y-32', 'opacity-0'), 3000);
-        }
-        function extractFolderId(url) {
-            const match = url.match(/folders\/([a-zA-Z0-9-_]+)/); if (match) return match[1]; return url.match(/id=([a-zA-Z0-9-_]+)/)?.[1] || null;
-        }
-
-        // FLAG UNTUK MENCEGAH DOUBLE CLICK
-        let isFetchingDrive = false;
-
-        async function loadFromDrive(overrideId = null, folderName = null, isNavBack = false) {
-            if (typeof CONFIG_APP === 'undefined' || !CONFIG_APP.googleApiKey) return showAlert('Sistem belum dikonfigurasi.', 'error');
-            
-            // Mencegah penarikan double akibat klik ganda yang menyebabkan alert error
-            if (isFetchingDrive) return;
-            isFetchingDrive = true;
-
-            let targetId = overrideId;
-            if (!targetId) {
-                targetId = extractFolderId(document.getElementById('driveLink').value.trim()) || document.getElementById('driveLink').value.trim();
-                if (!targetId) { isFetchingDrive = false; return showAlert('Link Google Drive tidak valid.', 'error'); }
-                appState.rootFolderId = targetId; appState.folderHistory = []; loadProgress(appState.rootFolderId); 
-                document.getElementById('inputSection').classList.add('hidden');
-            } else if (!isNavBack) {
-                appState.folderHistory.push({ id: appState.folderId, name: appState.folderHistory.length === 0 ? "Galeri Utama" : document.getElementById('currentFolderDisplay').innerText });
-            }
-            appState.folderId = targetId; appState.currentPage = 1; appState.viewMode = 'all';
-            const displayTitle = (targetId === appState.rootFolderId) ? TRANSLATIONS[appState.lang].galleryTitle : folderName;
-            document.getElementById('currentFolderDisplay').innerHTML = (targetId === appState.rootFolderId) ? displayTitle : `<i class="fa-solid fa-folder-open text-blue-500 mr-2"></i> ${displayTitle}`;
-            document.getElementById('loadingState').classList.remove('hidden'); document.getElementById('loadingState').classList.add('flex');
-            document.getElementById('galleryContainer').classList.add('hidden');
-            
-            try {
-                let fetched = []; let token = ""; const q = encodeURIComponent(`'${targetId}' in parents and trashed=false`);
-                do {
-                    let url = `https://www.googleapis.com/drive/v3/files?q=${q}&fields=nextPageToken,files(id,name,mimeType,thumbnailLink)&key=${CONFIG_APP.googleApiKey}&pageSize=1000&includeItemsFromAllDrives=true&supportsAllDrives=true`;
-                    if (token) url += `&pageToken=${token}`;
-                    const res = await fetch(url); const data = await res.json();
-                    
-                    if (!res.ok) {
-                        throw new Error(data.error?.message || "Akses ditolak Google");
-                    }
-
-                    if (data.files) fetched = fetched.concat(data.files); token = data.nextPageToken;
-                } while (token);
-
-                appState.folders = fetched.filter(f => f.mimeType === 'application/vnd.google-apps.folder');
-                let pFiles = fetched.filter(f => f.mimeType !== 'application/vnd.google-apps.folder' && f.thumbnailLink);
-                
-                appState.originalPhotos = pFiles.map(f => ({ 
-                    id: f.id, name: f.name, folderName: displayTitle, 
-                    url: f.thumbnailLink?.replace('=s220', '=s500'), fullUrl: f.thumbnailLink?.replace('=s220', '=s1600') 
-                }));
-                appState.photos = appState.originalPhotos.slice(0, 30);
-                
-                renderFolders(); document.getElementById('sortDropdown').value = 'random'; applySort('random');
-                if (!overrideId) setTimeout(() => { showTutorial(false); }, 800); else if(hasSeenTutorial) setTimeout(triggerTooltipsAnimation, 500);
-                
-            } catch (e) { 
-                console.error("Fetch Drive Error:", e);
-                showAlert(`Gagal: ${e.message}`, 'error'); 
-                document.getElementById('loadingState').classList.add('hidden'); 
-            } finally {
-                isFetchingDrive = false;
-            }
-        }
-
-        function renderFolders() {
-            const c = document.getElementById('folderNavContainer'), g = document.getElementById('folderGrid'), b = document.getElementById('btnBackFolder');
-            g.innerHTML = ''; b.classList.toggle('hidden', appState.folderHistory.length === 0);
-            if (appState.folders.length === 0 && appState.folderHistory.length === 0) { c.classList.add('hidden'); return; }
-            c.classList.remove('hidden');
-            appState.folders.forEach(f => {
-                const btn = document.createElement('button');
-                btn.className = "flex items-center gap-3 p-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-600 rounded-xl hover:border-blue-50 hover:shadow-md transition text-left group";
-                btn.innerHTML = `<i class="fa-solid fa-folder text-yellow-400 group-hover:text-blue-500 text-2xl"></i> <span class="font-bold text-xs md:text-sm text-slate-700 dark:text-slate-200 w-full truncate">${f.name}</span>`;
-                btn.onclick = () => loadFromDrive(f.id, f.name, false); g.appendChild(btn);
-            });
-            if(appState.folders.length === 0) g.innerHTML = `<p class="text-xs text-slate-500 col-span-full">Tidak ada sub-folder lagi.</p>`;
-        }
-        function navigateBackFolder() { if (appState.folderHistory.length) { const p = appState.folderHistory.pop(); loadFromDrive(p.id, p.name, true); } }
-        
-        function applySort(order) {
-            appState.sortOrder = order; const btnR = document.getElementById('btnReshuffle');
-            if (order === 'random') { btnR.classList.remove('hidden'); document.getElementById('sortDropdown').value = 'random'; } 
-            else { btnR.classList.add('hidden'); hideTooltip('reshuffleTooltip'); }
-
-            if (order === 'default') { appState.photos = appState.originalPhotos.slice(0, 30); }
-            else if (order === 'asc') { let sorted = [...appState.originalPhotos].sort((a, b) => a.name.localeCompare(b.name, undefined, {numeric: true})); appState.photos = sorted.slice(0, 30); }
-            else if (order === 'desc') { let sorted = [...appState.originalPhotos].sort((a, b) => b.name.localeCompare(a.name, undefined, {numeric: true})); appState.photos = sorted.slice(0, 30); }
-            else if (order === 'random') { let arr = [...appState.originalPhotos]; for (let i = arr.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [arr[i], arr[j]] = [arr[j], arr[i]]; } appState.photos = arr.slice(0, 30); }
-            
-            appState.currentPage = 1; renderGallery();
-            if(order === 'random') { const i = btnR.querySelector('i'); i.classList.add('fa-spin'); setTimeout(() => i.classList.remove('fa-spin'), 500); }
-        }
-
-        function updateViewModeText() {
-            const b = document.getElementById('viewModeBtn'), t = TRANSLATIONS[appState.lang];
-            if (appState.viewMode === 'all') { b.innerHTML = `<i class="fa-solid fa-filter"></i> <span id="btnViewText">${t.btnViewSel}</span> (${appState.selectedMap.size})`; b.className = "text-sm bg-slate-800 dark:bg-slate-700 text-white py-2 px-4 rounded-lg font-medium transition flex items-center gap-2 shadow-sm hover:bg-slate-700 dark:hover:bg-slate-600"; } 
-            else { b.innerHTML = `<i class="fa-solid fa-border-all"></i> <span id="btnViewText">${t.btnViewAll}</span>`; b.className = "text-sm bg-blue-600 text-white py-2 px-4 rounded-lg font-medium transition flex items-center gap-2 shadow-sm hover:bg-blue-700"; }
-        }
-        function toggleViewMode() {
-            if (appState.viewMode === 'all') {
-                if (appState.selectedMap.size === 0) return showAlert(TRANSLATIONS[appState.lang].alertEmpty, 'error');
-                appState.viewMode = 'selected'; document.getElementById('folderNavContainer').classList.add('hidden');
-            } else {
-                appState.viewMode = 'all'; if (appState.folders.length || appState.folderHistory.length) document.getElementById('folderNavContainer').classList.remove('hidden');
-            }
-            updateViewModeText(); appState.currentPage = 1; renderGallery();
-        }
-
-        function renderGallery() {
-            document.getElementById('loadingState').classList.add('hidden'); document.getElementById('loadingState').classList.remove('flex');
-            document.getElementById('galleryContainer').classList.remove('hidden');
-            const g = document.getElementById('photoGrid'); g.innerHTML = '';
-            
-            let gC = '', gap = '', isSm = appState.gridMode > 2;
-            if (appState.gridMode === 2) { gC = 'grid-cols-2 md:grid-cols-3 lg:grid-cols-4'; gap = 'gap-4 md:gap-6'; }
-            else if (appState.gridMode === 4) { gC = 'grid-cols-4 md:grid-cols-5 lg:grid-cols-6'; gap = 'gap-2 md:gap-4'; }
-            else { gC = 'grid-cols-6 md:grid-cols-8 lg:grid-cols-10'; gap = 'gap-1.5 md:gap-3'; }
-            g.className = `grid ${gC} ${gap} mb-8 transition-all`;
-
-            const pList = appState.viewMode === 'selected' ? Array.from(appState.selectedMap.values()) : appState.photos;
-            const pShow = pList.slice((appState.currentPage - 1) * ITEMS_PER_PAGE, appState.currentPage * ITEMS_PER_PAGE);
-
-            if (pShow.length === 0 && appState.viewMode === 'all') {
-                g.innerHTML = `<div class="col-span-full text-center py-10 text-slate-500 font-medium">Folder ini kosong atau hanya berisi folder lain.</div>`;
-            }
-
-            pShow.forEach((p, i) => {
-                const gIdx = appState.photos.findIndex(x => x.id === p.id);
-                const c = document.createElement('div'); c.className = `photo-card relative bg-slate-100 dark:bg-slate-800 rounded-xl overflow-hidden aspect-square shadow-sm cursor-pointer ${appState.selectedMap.has(p.id) ? 'selected' : ''}`;
-                
-                const img = document.createElement('img'); img.src = p.url; img.className = "w-full h-full object-cover transition-transform duration-300"; img.loading = "lazy"; img.onclick = () => toggleSelect(p, c);
-                
-                const ov = document.createElement('div'); ov.className = "selected-overlay absolute inset-0 bg-slate-900/10 dark:bg-black/20 z-10 flex items-start justify-end p-2 pointer-events-none";
-                const bS = isSm ? 'w-5 h-5 text-[10px]' : 'w-8 h-8 text-sm'; ov.innerHTML = `<div class="check-badge bg-blue-600 text-white ${bS} rounded-full flex items-center justify-center shadow-lg"><i class="fa-solid fa-check"></i></div>`;
-                
-                if (appState.notes[p.id]) {
-                    const nb = document.createElement('div'); nb.className = `absolute top-2 ${isSm ? 'right-8' : 'right-12'} bg-yellow-500 text-white ${bS} rounded-full flex items-center justify-center shadow-md z-20 pointer-events-none`;
-                    nb.innerHTML = '<i class="fa-solid fa-comment-dots"></i>'; ov.appendChild(nb);
-                }
-
-                const bA = document.createElement('div'); bA.className = `absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent ${isSm ? 'p-1.5 pt-4' : 'p-3 pt-8'} flex justify-between items-end z-20`;
-                const nT = document.createElement('p'); nT.className = `text-white ${isSm ? 'text-[9px]' : 'text-xs'} font-medium truncate drop-shadow-md w-3/4`; nT.textContent = p.name;
-                
-                const zB = document.createElement('button'); zB.className = `text-white bg-black/40 hover:bg-blue-600 ${isSm ? 'w-5 h-5 text-[10px] rounded' : 'w-8 h-8 rounded-lg'} flex items-center justify-center shadow-lg transition-colors`;
-                zB.innerHTML = '<i class="fa-solid fa-magnifying-glass-plus"></i>'; zB.onclick = (e) => { e.stopPropagation(); openLightbox(appState.viewMode === 'selected' ? i : gIdx); };
-
-                bA.appendChild(nT); bA.appendChild(zB); c.appendChild(img); c.appendChild(ov); c.appendChild(bA); g.appendChild(c);
-            });
-            renderPagination(pList.length);
-        }
-
-        function renderPagination(tot) {
-            const c = document.getElementById('paginationContainer'), tP = Math.ceil(tot / ITEMS_PER_PAGE);
-            if (tP <= 1) { c.classList.add('hidden'); return; } c.classList.remove('hidden'); c.innerHTML = '';
-            
-            const pB = document.createElement('button'); pB.innerHTML = '<i class="fa-solid fa-chevron-left"></i> Prev'; pB.disabled = appState.currentPage === 1;
-            pB.className = `px-5 py-2.5 rounded-xl font-medium flex gap-2 ${appState.currentPage===1?'bg-slate-50 dark:bg-slate-800 text-slate-300 dark:text-slate-600':'bg-white dark:bg-slate-700 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-600 border border-slate-200 dark:border-slate-600'}`;
-            pB.onclick = () => { appState.currentPage--; renderGallery(); document.getElementById('galleryContainer').scrollIntoView(); };
-            
-            const i = document.createElement('span'); i.className = 'px-5 py-2.5 text-sm font-bold text-slate-700 dark:text-slate-200 bg-slate-100 dark:bg-slate-700 rounded-xl border border-slate-200 dark:border-slate-600'; i.textContent = `${appState.currentPage} / ${tP}`;
-            
-            const nB = document.createElement('button'); nB.innerHTML = 'Next <i class="fa-solid fa-chevron-right"></i>'; nB.disabled = appState.currentPage === tP;
-            nB.className = `px-5 py-2.5 rounded-xl font-medium flex gap-2 ${appState.currentPage===tP?'bg-slate-50 dark:bg-slate-800 text-slate-300 dark:text-slate-600':'bg-white dark:bg-slate-700 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-600 border border-slate-200 dark:border-slate-600'}`;
-            nB.onclick = () => { appState.currentPage++; renderGallery(); document.getElementById('galleryContainer').scrollIntoView(); };
-            
-            c.appendChild(pB); c.appendChild(i); c.appendChild(nB);
-        }
-
-        function toggleSelect(pO, cE) {
-            if (appState.selectedMap.has(pO.id)) { appState.selectedMap.delete(pO.id); delete appState.notes[pO.id]; cE.classList.remove('selected'); } 
-            else { if (appState.kuota && appState.selectedMap.size >= appState.kuota) return showAlert(TRANSLATIONS[appState.lang].alertLimit, 'error'); appState.selectedMap.set(pO.id, pO); cE.classList.add('selected'); }
-            updateActionBar(); saveProgress(); if (appState.viewMode === 'all') updateViewModeText();
-        }
-
-        function updateActionBar() {
-            const cnt = appState.selectedMap.size, bar = document.getElementById('actionBar');
-            document.getElementById('selectedCount').textContent = cnt;
-            if (appState.kuota) {
-                const pc = Math.min((cnt / appState.kuota) * 100, 100), qB = document.getElementById('quotaBar'), qT = document.getElementById('quotaText');
-                qT.textContent = `${cnt} / ${appState.kuota}`; qB.style.width = `${pc}%`;
-                if (pc >= 100) { qB.className = 'bg-green-500 h-2.5 rounded-full transition-all'; qT.className = 'text-sm font-bold text-green-600'; } 
-                else if (pc >= 80) { qB.className = 'bg-yellow-500 h-2.5 rounded-full transition-all'; qT.className = 'text-sm font-bold text-slate-800 dark:text-white'; } 
-                else { qB.className = 'bg-blue-600 h-2.5 rounded-full transition-all'; qT.className = 'text-sm font-bold text-slate-800 dark:text-white'; }
-            }
-            if(document.getElementById('view-selector').classList.contains('flex')) { cnt > 0 ? bar.classList.remove('translate-y-full') : bar.classList.add('translate-y-full'); }
-        }
-
-        // ==========================================
-        // FUNGSI COPY / DOWNLOAD (TIDAK MENGUNCI)
-        // ==========================================
         function copyListOnly() {
             if (!appState.selectedMap.size) return;
             const arr = Array.from(appState.selectedMap.values()), v = CONFIG_APP?.namaVendor || 'Studio';
