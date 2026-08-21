@@ -71,8 +71,11 @@
     <!-- LOGIKA JAVASCRIPT -->
     <script>
         const supabaseUrl = 'https://ygoawyedjxcxxnhlbtit.supabase.co';
-        const supabaseKey = 'sb_publishable_El7jjrn0WyxR09b8wRkdoQ_BDFhXXa-';
-        const supabase = supabase.createClient(supabaseUrl, supabaseKey);
+        // Menggunakan JWT Key Anda
+        const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inlnb2F3eWVkanhjeHhuaGxidGl0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODcyNTQ1NDMsImV4cCI6MjEwMjgzMDU0M30.qBH1iyMv_RWMUkgZMVd-YP0mJfp-ATUqfHZU7nzclUc';
+        
+        // PERBAIKAN: Gunakan variabel 'db' agar tidak error tabrakan nama
+        const db = supabase.createClient(supabaseUrl, supabaseKey);
 
         function formatTanggalIndo(isoString) {
             const date = new Date(isoString);
@@ -92,12 +95,11 @@
             const totalCount = document.getElementById('totalCount');
             const icon = document.getElementById('refreshIcon');
 
-            // Putar icon saat loading
             icon.classList.add('fa-spin');
             
             try {
-                // Tarik data dari supabase dan urutkan dari yang terbaru (descending)
-                const { data, error } = await supabase
+                // Memakai 'db' alih-alih 'supabase'
+                const { data, error } = await db
                     .from('demo_tracking')
                     .select('*')
                     .order('created_at', { ascending: false });
@@ -113,7 +115,7 @@
                 if (data.length === 0) {
                     tbody.innerHTML = `<tr><td colspan="3" class="px-6 py-8 text-center text-slate-500 font-medium">Belum ada pengunjung yang mencoba aplikasi demo ini.</td></tr>`;
                 } else {
-                    tbody.innerHTML = ''; // Kosongkan tabel
+                    tbody.innerHTML = ''; 
                     data.forEach((row, index) => {
                         const tr = document.createElement('tr');
                         tr.className = "hover:bg-slate-50 transition-colors";
@@ -129,12 +131,10 @@
             } catch (err) {
                 console.error("Terjadi kesalahan sistem:", err);
             } finally {
-                // Hentikan putaran icon
                 setTimeout(() => { icon.classList.remove('fa-spin'); }, 500);
             }
         }
 
-        // Panggil fungsi saat pertama kali halaman dibuka
         window.onload = fetchData;
     </script>
 </body>
