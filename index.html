@@ -14,19 +14,7 @@
         const db = supabase.createClient(CONFIG_APP.supabaseUrl, CONFIG_APP.supabaseKey);
         let demoTimerInterval;
         let userIpGlobal = null;
-
-        // FUNGSI BARU: MELAPORKAN STATUS ONLINE KE DASHBOARD ADMIN
-        function laporStatusOnline() {
-            const room = db.channel('online_visitors');
-            const idPengunjung = 'visitor-' + Math.random().toString(36).substr(2, 9);
-            
-            room.subscribe(async (status) => {
-                if (status === 'SUBSCRIBED') {
-                    // Kirim sinyal bahwa orang ini sedang aktif
-                    await room.track({ id: idPengunjung, online_at: new Date().toISOString() });
-                }
-            });
-        }
+        let isBurned = false;
 
         // Fungsi Kunci UI Seketika
         function lockAppDemo() {
@@ -48,11 +36,13 @@
 
         // Fungsi Eksekusi Akhir 7 Menit (Kunci Layar & Input IP)
         async function burnDemoAndLock() {
+            if (isBurned) return;
+            isBurned = true;
+            
             lockAppDemo(); 
             
-            // Catat IP ke Supabase jika belum
+            // Catat IP ke Supabase (Hanya terjadi saat timer 00:00)
             if (userIpGlobal) {
-                // Cek lagi untuk jaga-jaga agar tidak double-insert
                 const { data } = await db.from('demo_tracking').select('ip_address').eq('ip_address', userIpGlobal).maybeSingle();
                 if (!data) {
                     await db.from('demo_tracking').insert([{ ip_address: userIpGlobal }]);
@@ -85,21 +75,19 @@
                 let s = (timeLeft % 60).toString().padStart(2, '0');
                 timerDisplay.innerText = `${m}:${s}`;
 
+                // Jika waktu habis (00:00), kunci dan input IP!
                 if (timeLeft <= 0) {
                     clearInterval(demoTimerInterval);
                     burnDemoAndLock(); 
                 }
             }
 
-            updateTimer(); 
+            updateTimer(); // Panggil sekali di awal
             demoTimerInterval = setInterval(updateTimer, 1000);
         }
 
-        // Fungsi Pelacakan Utama
+        // Fungsi Pelacakan Utama & Logika Reset dari Admin
         async function initDemoTracking() {
-            // Lapor status online terlebih dahulu
-            laporStatusOnline();
-
             try {
                 // Dapatkan IP
                 const ipRes = await fetch('https://api.ipify.org?format=json');
@@ -114,13 +102,26 @@
                     .maybeSingle(); 
 
                 if (data) {
+                    // IP ditemukan di Database -> Langsung Kunci
+                    localStorage.removeItem('demo_end_time'); // Hapus sisa timer
                     lockAppDemo();
                 } else {
+                    // IP TIDAK ADA di Database
+                    // Kita cek apakah sebelumnya di HP ini timer sudah habis
+                    let savedTime = localStorage.getItem('demo_end_time');
+                    if (savedTime && Date.now() >= parseInt(savedTime)) {
+                        // Jika waktu di HP sudah habis TAPI IP tidak ada di database,
+                        // Berarti ADMIN BARU SAJA MENGHAPUS IP INI!
+                        // Reset timer agar mereka dapat 7 menit dari awal.
+                        localStorage.removeItem('demo_end_time');
+                    }
+                    
+                    // Bebaskan masuk dan jalankan/lanjutkan Timer
                     startOrResumeTimer();
                 }
             } catch (err) {
                 console.error("Gagal inisiasi IP:", err); 
-                startOrResumeTimer(); 
+                startOrResumeTimer(); // Fallback
             }
         }
         
@@ -721,43 +722,28 @@
             try {
                 let fetched = []; let token = ""; const q = encodeURIComponent(`'${targetId}' in parents and trashed=false`);
                 do {
-                    let url = `https://www.googleapis.com/drive/v3/files?q=${q}&fields=nextPageToken,files(id,name,mimeType,thumbnailLink)&key=${CONFIG_APP.googleApiKey}&pageSize=1000`;
+                    // PERBAIKAN: Menambahkan includeItemsFromAllDrives & supportsAllDrives agar subfolder di Shared Drive tetap terbaca
+                    let url = `https://www.googleapis.com/drive/v3/files?q=${q}&fields=nextPageToken,files(id,name,mimeType,thumbnailLink)&key=${CONFIG_APP.googleApiKey}&pageSize=1000&includeItemsFromAllDrives=true&supportsAllDrives=true`;
                     if (token) url += `&pageToken=${token}`;
-                    
-                    const res = await fetch(url); 
-                    const data = await res.json();
-                    
-                    // PENYARINGAN ERROR BARU: 
-                    // Menangkap error jika Google menolak API Key atau Link Drive
-                    if (!res.ok) {
-                        throw new Error(data.error?.message || "Akses Ditolak oleh Server Google");
-                    }
-
-                    if (data.files) fetched = fetched.concat(data.files); 
-                    token = data.nextPageToken;
+                    const res = await fetch(url); const data = await res.json();
+                    if (data.files) fetched = fetched.concat(data.files); token = data.nextPageToken;
                 } while (token);
 
-                if (fetched.length > 0 || appState.folderHistory.length > 0) {
-                    appState.folders = fetched.filter(f => f.mimeType === 'application/vnd.google-apps.folder');
-                    let pFiles = fetched.filter(f => f.mimeType !== 'application/vnd.google-apps.folder' && f.thumbnailLink);
-                    
-                    appState.originalPhotos = pFiles.map(f => ({ 
-                        id: f.id, name: f.name, folderName: displayTitle, 
-                        url: f.thumbnailLink?.replace('=s220', '=s500'), fullUrl: f.thumbnailLink?.replace('=s220', '=s1600') 
-                    }));
-                    appState.photos = appState.originalPhotos.slice(0, 30);
-                    
-                    renderFolders(); document.getElementById('sortDropdown').value = 'random'; applySort('random');
-                    if (!overrideId) setTimeout(() => { showTutorial(false); }, 800); else if(hasSeenTutorial) setTimeout(triggerTooltipsAnimation, 500);
-                } else { 
-                    showAlert('Folder kosong atau Hak Akses Drive belum "Siapa saja yang memiliki tautan" (Viewer).', 'error'); 
-                    document.getElementById('loadingState').classList.add('hidden'); 
-                }
-            } catch (e) { 
-                console.error("Gagal terhubung ke Drive:", e);
+                appState.folders = fetched.filter(f => f.mimeType === 'application/vnd.google-apps.folder');
+                let pFiles = fetched.filter(f => f.mimeType !== 'application/vnd.google-apps.folder' && f.thumbnailLink);
                 
-                // PERUBAHAN: Menampilkan pesan error asli di layar
-                showAlert(`Gagal: ${e.message}`, 'error'); 
+                appState.originalPhotos = pFiles.map(f => ({ 
+                    id: f.id, name: f.name, folderName: displayTitle, 
+                    url: f.thumbnailLink?.replace('=s220', '=s500'), fullUrl: f.thumbnailLink?.replace('=s220', '=s1600') 
+                }));
+                appState.photos = appState.originalPhotos.slice(0, 30);
+                
+                renderFolders(); document.getElementById('sortDropdown').value = 'random'; applySort('random');
+                if (!overrideId) setTimeout(() => { showTutorial(false); }, 800); else if(hasSeenTutorial) setTimeout(triggerTooltipsAnimation, 500);
+                
+            } catch (e) { 
+                console.error(e);
+                showAlert('Gagal terhubung ke Google Drive.', 'error'); 
                 document.getElementById('loadingState').classList.add('hidden'); 
             }
         }
@@ -819,6 +805,10 @@
 
             const pList = appState.viewMode === 'selected' ? Array.from(appState.selectedMap.values()) : appState.photos;
             const pShow = pList.slice((appState.currentPage - 1) * ITEMS_PER_PAGE, appState.currentPage * ITEMS_PER_PAGE);
+
+            if (pShow.length === 0 && appState.viewMode === 'all') {
+                g.innerHTML = `<div class="col-span-full text-center py-10 text-slate-500 font-medium">Folder ini kosong atau hanya berisi folder lain.</div>`;
+            }
 
             pShow.forEach((p, i) => {
                 const gIdx = appState.photos.findIndex(x => x.id === p.id);
@@ -882,7 +872,7 @@
         }
 
         // ==========================================
-        // FUNGSI COPY / DOWNLOAD (BEBAS BERKALI-KALI)
+        // FUNGSI COPY / DOWNLOAD (TIDAK MENGUNCI)
         // ==========================================
         function copyListOnly() {
             if (!appState.selectedMap.size) return;
@@ -951,7 +941,7 @@
         function saveNote() { if(currentZoomPhoto) { const v = document.getElementById('lightboxNote').value.trim(); if(v) appState.notes[currentZoomPhoto.id] = v; else delete appState.notes[currentZoomPhoto.id]; saveProgress(); } }
 
         // ==========================================
-        // LOGIKA AUTO RAW SORTER (BEBAS BERKALI-KALI)
+        // LOGIKA AUTO RAW SORTER
         // ==========================================
         let sourceHandle = null, destHandle = null;
 
