@@ -32,27 +32,46 @@
         }
 
         async function checkDemoAccess() {
+            console.log("1. Memulai proses pengecekan IP...");
+            
             try {
+                // Mengambil IP
                 const ipRes = await fetch('https://api.ipify.org?format=json');
                 const ipData = await ipRes.json();
                 const userIp = ipData.ip;
+                
+                console.log("2. IP Berhasil didapatkan:", userIp);
 
+                // Mengecek Supabase
+                console.log("3. Mengecek data di Supabase menggunakan kunci yang ada...");
                 const { data, error } = await supabase
                     .from('demo_tracking')
                     .select('ip_address')
                     .eq('ip_address', userIp)
                     .maybeSingle(); 
 
-                if (error) console.error("Error cek IP Supabase:", error);
+                if (error) {
+                    console.error("GAGAL DI TAHAP CEK SUPABASE. Error:", error);
+                    return; // Hentikan proses jika error
+                }
 
                 if (data) {
+                    console.log("4. IP Sudah Terdaftar! Mengunci layar...");
                     lockAppDemo();
                 } else {
+                    console.log("4. IP Baru! Mencoba menyimpan ke database...");
+                    
+                    // Mencoba Input
                     const { error: insertError } = await supabase.from('demo_tracking').insert([{ ip_address: userIp }]);
-                    if (insertError) console.error("Gagal menyimpan IP:", insertError);
+                    
+                    if (insertError) {
+                        console.error("GAGAL MENYIMPAN KE DATABASE. Error:", insertError);
+                    } else {
+                        console.log("5. SUKSES! Data IP berhasil masuk ke tabel demo_tracking.");
+                    }
                 }
             } catch (err) {
-                console.error("Sistem demo error:", err); 
+                console.error("SISTEM TERHENTI TOTAL (Mungkin gagal mengambil IP). Error:", err); 
             }
         }
         
