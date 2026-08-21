@@ -682,109 +682,121 @@
         }
 
         // ==========================================
-        // PERBAIKAN LOGIKA LOAD FROM DRIVE (ANTI-STUCK KETAT)
+        // PERBAIKAN LOGIKA LOAD FROM DRIVE (LANCAR & ANTI-STUCK)
         // ==========================================
         let isFetchingDrive = false;
 
         async function loadFromDrive(overrideId = null, folderName = null, isNavBack = false) {
-            // Cegah double-click yang membekukan sistem
+            // Mencegah double-click yang membuat layar macet
             if (isFetchingDrive) return;
             isFetchingDrive = true;
 
-            let targetId = overrideId; // Deklarasi di luar agar dikenali oleh Catch
+            if (typeof CONFIG_APP === 'undefined' || !CONFIG_APP.googleApiKey) {
+                isFetchingDrive = false;
+                return showAlert('Sistem belum dikonfigurasi.', 'error');
+            }
+
+            let targetId = overrideId;
+            if (!targetId) {
+                const rawLink = document.getElementById('driveLink').value.trim();
+                targetId = extractFolderId(rawLink) || rawLink;
+                
+                if (!targetId) { 
+                    isFetchingDrive = false;
+                    return showAlert('Link Google Drive tidak valid/kosong.', 'error');
+                }
+                appState.rootFolderId = targetId; 
+                appState.folderHistory = []; 
+                loadProgress(appState.rootFolderId); 
+            } else if (!isNavBack) {
+                appState.folderHistory.push({ 
+                    id: appState.folderId, 
+                    name: appState.folderHistory.length === 0 ? "Galeri Utama" : document.getElementById('currentFolderDisplay').innerText 
+                });
+            }
+
+            appState.folderId = targetId; 
+            appState.currentPage = 1; 
+            appState.viewMode = 'all';
+            
+            const displayTitle = (targetId === appState.rootFolderId) ? TRANSLATIONS[appState.lang].galleryTitle : folderName;
+            document.getElementById('currentFolderDisplay').innerHTML = (targetId === appState.rootFolderId) ? displayTitle : `<i class="fa-solid fa-folder-open text-blue-500 mr-2"></i> ${displayTitle}`;
+
+            // Sembunyikan form dan munculkan Loading
+            document.getElementById('inputSection').classList.add('hidden');
+            document.getElementById('galleryContainer').classList.add('hidden');
+            document.getElementById('loadingState').classList.remove('hidden'); 
+            document.getElementById('loadingState').classList.add('flex');
 
             try {
-                if (typeof CONFIG_APP === 'undefined' || !CONFIG_APP.googleApiKey) {
-                    throw new Error("Sistem (API Key) belum dikonfigurasi.");
-                }
-
-                if (!targetId) {
-                    const rawUrl = document.getElementById('driveLink').value.trim();
-                    targetId = extractFolderId(rawUrl) || rawUrl;
-                    
-                    if (!targetId) { 
-                        throw new Error("Link Google Drive tidak valid/kosong.");
-                    }
-                    appState.rootFolderId = targetId; 
-                    appState.folderHistory = []; 
-                    loadProgress(appState.rootFolderId); 
-                }
-
-                // Sembunyikan form dan paksa munculkan Loading
-                document.getElementById('inputSection').classList.add('hidden');
-                document.getElementById('galleryContainer').classList.add('hidden');
-                document.getElementById('loadingState').classList.remove('hidden'); 
-                document.getElementById('loadingState').classList.add('flex');
-
                 let fetched = []; 
                 let token = ""; 
                 const q = encodeURIComponent(`'${targetId}' in parents and trashed=false`);
                 
                 do {
-                    let url = `https://www.googleapis.com/drive/v3/files?q=${q}&fields=nextPageToken,files(id,name,mimeType,thumbnailLink)&key=${CONFIG_APP.googleApiKey}&pageSize=1000&includeItemsFromAllDrives=true&supportsAllDrives=true`;
+                    // KEMBALI MENGGUNAKAN API YANG TERBUKTI 100% BEKERJA
+                    let url = `https://www.googleapis.com/drive/v3/files?q=${q}&fields=nextPageToken,files(id,name,mimeType,thumbnailLink)&key=${CONFIG_APP.googleApiKey}&pageSize=1000`;
                     if (token) url += `&pageToken=${token}`;
                     
                     const res = await fetch(url); 
                     const data = await res.json();
                     
                     if (!res.ok) {
-                        throw new Error(data.error?.message || "Akses ditolak. Cek hak akses folder Drive Anda.");
+                        throw new Error(data.error?.message || "Akses ditolak oleh Server Google.");
                     }
 
                     if (data.files) fetched = fetched.concat(data.files); 
                     token = data.nextPageToken;
                 } while (token);
 
-                if (targetId !== appState.rootFolderId && !isNavBack) {
-                    appState.folderHistory.push({ 
-                        id: appState.folderId, 
-                        name: appState.folderHistory.length === 0 ? "Galeri Utama" : document.getElementById('currentFolderDisplay').innerText 
-                    });
+                if (fetched.length > 0 || appState.folderHistory.length > 0) {
+                    appState.folders = fetched.filter(f => f.mimeType === 'application/vnd.google-apps.folder');
+                    let pFiles = fetched.filter(f => f.mimeType !== 'application/vnd.google-apps.folder' && f.thumbnailLink);
+                    
+                    appState.originalPhotos = pFiles.map(f => ({ 
+                        id: f.id, name: f.name, folderName: displayTitle, 
+                        url: f.thumbnailLink?.replace('=s220', '=s500'), fullUrl: f.thumbnailLink?.replace('=s220', '=s1600') 
+                    }));
+                    appState.photos = appState.originalPhotos.slice(0, 30);
+                    
+                    renderFolders(); 
+                    document.getElementById('sortDropdown').value = 'random'; 
+                    
+                    // applySort akan memanggil renderGallery yang menormalkan layar
+                    applySort('random'); 
+                    
+                    if (!overrideId) setTimeout(() => { showTutorial(false); }, 800); 
+                    else if(hasSeenTutorial) setTimeout(triggerTooltipsAnimation, 500);
+                } else {
+                    showAlert('Folder kosong atau hak akses belum Publik.', 'error');
+                    
+                    // KEMBALIKAN KE LAYAR AWAL JIKA FOLDER KOSONG (ANTI-STUCK)
+                    document.getElementById('loadingState').classList.add('hidden'); 
+                    document.getElementById('loadingState').classList.remove('flex');
+                    
+                    if (!overrideId || targetId === appState.rootFolderId) {
+                        document.getElementById('inputSection').classList.remove('hidden');
+                    } else {
+                        document.getElementById('galleryContainer').classList.remove('hidden');
+                        if (!isNavBack && appState.folderHistory.length > 0) appState.folderHistory.pop();
+                    }
                 }
-
-                appState.folderId = targetId; 
-                appState.currentPage = 1; 
-                appState.viewMode = 'all';
-                
-                const displayTitle = (targetId === appState.rootFolderId) ? TRANSLATIONS[appState.lang].galleryTitle : folderName;
-                document.getElementById('currentFolderDisplay').innerHTML = (targetId === appState.rootFolderId) ? displayTitle : `<i class="fa-solid fa-folder-open text-blue-500 mr-2"></i> ${displayTitle}`;
-
-                appState.folders = fetched.filter(f => f.mimeType === 'application/vnd.google-apps.folder');
-                let pFiles = fetched.filter(f => f.mimeType !== 'application/vnd.google-apps.folder' && f.thumbnailLink);
-                
-                appState.originalPhotos = pFiles.map(f => ({ 
-                    id: f.id, name: f.name, folderName: displayTitle, 
-                    url: f.thumbnailLink?.replace('=s220', '=s500'), fullUrl: f.thumbnailLink?.replace('=s220', '=s1600') 
-                }));
-                appState.photos = appState.originalPhotos.slice(0, 30);
-                
-                renderFolders(); 
-                document.getElementById('sortDropdown').value = 'random'; 
-                applySort('random'); 
-                
-                if (!overrideId) setTimeout(() => { showTutorial(false); }, 800); 
-                else if(hasSeenTutorial) setTimeout(triggerTooltipsAnimation, 500);
-                
             } catch (e) { 
                 console.error("Fetch Drive Error:", e);
                 showAlert(`Gagal: ${e.message}`, 'error'); 
                 
-                // === PENGAMANAN ANTI STUCK (KEMBALIKAN TAMPILAN) ===
+                // KEMBALIKAN KE LAYAR AWAL JIKA TERJADI ERROR (ANTI-STUCK)
                 document.getElementById('loadingState').classList.add('hidden'); 
                 document.getElementById('loadingState').classList.remove('flex');
                 
-                // Jika error terjadi di layar depan (input link)
-                if (!targetId || targetId === appState.rootFolderId) {
+                if (!overrideId || targetId === appState.rootFolderId) {
                     document.getElementById('inputSection').classList.remove('hidden');
                 } else {
-                    // Jika error terjadi saat masuk ke dalam sub-folder
                     document.getElementById('galleryContainer').classList.remove('hidden');
-                    if (!isNavBack && appState.folderHistory.length > 0) {
-                        appState.folderHistory.pop(); // Buang rekam jejak yang gagal
-                    }
+                    if (!isNavBack && appState.folderHistory.length > 0) appState.folderHistory.pop();
                 }
             } finally {
-                // SANGAT PENTING: Selalu buka gembok klik ini apapun yang terjadi!
+                // SANGAT PENTING: Buka gembok klik
                 isFetchingDrive = false;
             }
         }
