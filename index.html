@@ -16,6 +16,18 @@
         let userIpGlobal = null;
         let isBurned = false;
 
+        // FUNGSI BARU: MELAPORKAN STATUS ONLINE KE DASHBOARD ADMIN
+        function laporStatusOnline() {
+            const room = db.channel('online_visitors');
+            const idPengunjung = 'visitor-' + Math.random().toString(36).substr(2, 9);
+            
+            room.subscribe(async (status) => {
+                if (status === 'SUBSCRIBED') {
+                    await room.track({ id: idPengunjung, online_at: new Date().toISOString() });
+                }
+            });
+        }
+
         // Fungsi Kunci UI Seketika
         function lockAppDemo() {
             if (demoTimerInterval) clearInterval(demoTimerInterval);
@@ -41,7 +53,7 @@
             
             lockAppDemo(); 
             
-            // Catat IP ke Supabase (Hanya terjadi saat timer 00:00)
+            // Catat IP ke Supabase (Hanya terjadi saat timer menyentuh 00:00)
             if (userIpGlobal) {
                 const { data } = await db.from('demo_tracking').select('ip_address').eq('ip_address', userIpGlobal).maybeSingle();
                 if (!data) {
@@ -88,8 +100,9 @@
 
         // Fungsi Pelacakan Utama & Logika Reset dari Admin
         async function initDemoTracking() {
+            laporStatusOnline(); // Laporkan kehadiran ke Admin
+
             try {
-                // Dapatkan IP
                 const ipRes = await fetch('https://api.ipify.org?format=json');
                 const ipData = await ipRes.json();
                 userIpGlobal = ipData.ip;
@@ -121,7 +134,7 @@
                 }
             } catch (err) {
                 console.error("Gagal inisiasi IP:", err); 
-                startOrResumeTimer(); // Fallback
+                startOrResumeTimer(); // Fallback jika gagal mengambil IP
             }
         }
         
@@ -702,12 +715,20 @@
             const match = url.match(/folders\/([a-zA-Z0-9-_]+)/); if (match) return match[1]; return url.match(/id=([a-zA-Z0-9-_]+)/)?.[1] || null;
         }
 
+        // FLAG UNTUK MENCEGAH DOUBLE CLICK
+        let isFetchingDrive = false;
+
         async function loadFromDrive(overrideId = null, folderName = null, isNavBack = false) {
             if (typeof CONFIG_APP === 'undefined' || !CONFIG_APP.googleApiKey) return showAlert('Sistem belum dikonfigurasi.', 'error');
+            
+            // Mencegah penarikan double akibat klik ganda yang menyebabkan alert error
+            if (isFetchingDrive) return;
+            isFetchingDrive = true;
+
             let targetId = overrideId;
             if (!targetId) {
                 targetId = extractFolderId(document.getElementById('driveLink').value.trim()) || document.getElementById('driveLink').value.trim();
-                if (!targetId) return showAlert('Link Google Drive tidak valid.', 'error');
+                if (!targetId) { isFetchingDrive = false; return showAlert('Link Google Drive tidak valid.', 'error'); }
                 appState.rootFolderId = targetId; appState.folderHistory = []; loadProgress(appState.rootFolderId); 
                 document.getElementById('inputSection').classList.add('hidden');
             } else if (!isNavBack) {
@@ -722,10 +743,14 @@
             try {
                 let fetched = []; let token = ""; const q = encodeURIComponent(`'${targetId}' in parents and trashed=false`);
                 do {
-                    // PERBAIKAN: Menambahkan includeItemsFromAllDrives & supportsAllDrives agar subfolder di Shared Drive tetap terbaca
                     let url = `https://www.googleapis.com/drive/v3/files?q=${q}&fields=nextPageToken,files(id,name,mimeType,thumbnailLink)&key=${CONFIG_APP.googleApiKey}&pageSize=1000&includeItemsFromAllDrives=true&supportsAllDrives=true`;
                     if (token) url += `&pageToken=${token}`;
                     const res = await fetch(url); const data = await res.json();
+                    
+                    if (!res.ok) {
+                        throw new Error(data.error?.message || "Akses ditolak Google");
+                    }
+
                     if (data.files) fetched = fetched.concat(data.files); token = data.nextPageToken;
                 } while (token);
 
@@ -742,9 +767,11 @@
                 if (!overrideId) setTimeout(() => { showTutorial(false); }, 800); else if(hasSeenTutorial) setTimeout(triggerTooltipsAnimation, 500);
                 
             } catch (e) { 
-                console.error(e);
-                showAlert('Gagal terhubung ke Google Drive.', 'error'); 
+                console.error("Fetch Drive Error:", e);
+                showAlert(`Gagal: ${e.message}`, 'error'); 
                 document.getElementById('loadingState').classList.add('hidden'); 
+            } finally {
+                isFetchingDrive = false;
             }
         }
 
