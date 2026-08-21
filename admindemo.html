@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Demo Tracker Dashboard</title>
+    <title>Demo Tracker Dashboard - LIVE</title>
     
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
@@ -20,8 +20,18 @@
 
     <div class="max-w-5xl mx-auto">
         <!-- HEADER -->
-        <div class="flex flex-col md:flex-row justify-between items-center bg-white p-6 rounded-2xl shadow-sm border border-slate-200 mb-8">
-            <div class="flex items-center gap-4 mb-4 md:mb-0">
+        <div class="flex flex-col md:flex-row justify-between items-center bg-white p-6 rounded-2xl shadow-sm border border-slate-200 mb-8 relative overflow-hidden">
+            
+            <!-- INDIKATOR LIVE REAL-TIME -->
+            <div class="absolute top-4 right-6 flex items-center gap-2">
+                <span class="text-[10px] font-bold text-green-500 tracking-wider">LIVE UPDATE</span>
+                <span class="relative flex h-3 w-3">
+                  <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+                  <span class="relative inline-flex rounded-full h-3 w-3 bg-green-500"></span>
+                </span>
+            </div>
+
+            <div class="flex items-center gap-4 mb-4 md:mb-0 mt-2 md:mt-0">
                 <div class="bg-blue-600 text-white w-12 h-12 rounded-xl flex items-center justify-center text-2xl shadow-md">
                     <i class="fa-solid fa-chart-simple"></i>
                 </div>
@@ -31,12 +41,13 @@
                 </div>
             </div>
             
-            <div class="flex items-center gap-6">
-                <div class="text-right">
+            <div class="flex items-center gap-6 mt-2 md:mt-0">
+                <div class="text-right mr-4 md:mr-0">
                     <p class="text-xs text-slate-500 font-bold uppercase tracking-wider mb-1">Total Visitor Demo</p>
                     <p class="text-3xl font-black text-blue-600" id="totalCount">0</p>
                 </div>
-                <button onclick="fetchData()" class="w-12 h-12 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-xl transition flex items-center justify-center shadow-inner border border-slate-200" title="Refresh Data">
+                <!-- Tombol Refresh manual tetap disisakan untuk jaga-jaga -->
+                <button onclick="fetchData()" class="w-12 h-12 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-xl transition flex items-center justify-center shadow-inner border border-slate-200" title="Refresh Data Manual">
                     <i class="fa-solid fa-rotate-right" id="refreshIcon"></i>
                 </button>
             </div>
@@ -66,7 +77,7 @@
             </div>
         </div>
         
-        <p class="text-center text-xs text-slate-400 mt-6">Halaman ini bersifat pribadi. Tolong jangan sebarkan link halaman ini.</p>
+        <p class="text-center text-xs text-slate-400 mt-6">Halaman ini otomatis mendeteksi pengunjung baru secara Real-time.</p>
     </div>
 
     <!-- LOGIKA JAVASCRIPT -->
@@ -89,42 +100,31 @@
             });
         }
 
-        // FUNGSI UNTUK MENGHAPUS DATA IP
+        // FUNGSI MENGHAPUS DATA
         async function hapusData(ipTarget) {
-            // Konfirmasi sebelum menghapus
             const konfirmasi = confirm(`Yakin ingin menghapus IP ${ipTarget}?\n\nJika dihapus, perangkat ini akan bisa mencoba aplikasi demo lagi.`);
-            
-            if (!konfirmasi) return; // Batal jika user pilih No/Cancel
+            if (!konfirmasi) return; 
 
             try {
-                // Tampilkan loading cursor
                 document.body.style.cursor = 'wait';
-
-                // Perintah hapus data di Supabase berdasarkan IP
-                const { error } = await db
-                    .from('demo_tracking')
-                    .delete()
-                    .eq('ip_address', ipTarget);
-
+                const { error } = await db.from('demo_tracking').delete().eq('ip_address', ipTarget);
+                
                 if (error) {
                     console.error('Error saat menghapus:', error);
                     alert("Gagal menghapus data. Periksa koneksi Anda.");
-                    return;
                 }
-
-                // Refresh tabel setelah berhasil dihapus
-                fetchData();
+                // Catatan: Kita tidak perlu memanggil fetchData() di sini 
+                // karena fitur Real-time (di bawah) akan otomatis mendeteksi 
+                // bahwa data terhapus dan merefresh tabel dengan sendirinya!
 
             } catch (err) {
-                console.error("Terjadi kesalahan sistem saat menghapus:", err);
                 alert("Terjadi kesalahan sistem.");
             } finally {
-                // Kembalikan cursor normal
                 document.body.style.cursor = 'default';
             }
         }
 
-        // FUNGSI UNTUK MENARIK DATA
+        // FUNGSI MENARIK DATA
         async function fetchData() {
             const tbody = document.getElementById('tableBody');
             const totalCount = document.getElementById('totalCount');
@@ -174,7 +174,30 @@
             }
         }
 
-        window.onload = fetchData;
+        // ==========================================
+        // FITUR REAL-TIME LISTENER
+        // ==========================================
+        function aktifkanRealtime() {
+            // Membuka jalur komunikasi websocket ke Supabase
+            db.channel('pemantau_demo_admin')
+              .on(
+                'postgres_changes',
+                { event: '*', schema: 'public', table: 'demo_tracking' },
+                (payload) => {
+                  console.log('Terjadi perubahan di database!', payload);
+                  // Otomatis muat ulang tabel setiap kali ada pengunjung baru yang tercatat (INSERT) 
+                  // atau setiap kali Anda menghapus data (DELETE)
+                  fetchData(); 
+                }
+              )
+              .subscribe();
+        }
+
+        // Panggil fungsi saat pertama kali halaman dibuka
+        window.onload = () => {
+            fetchData();
+            aktifkanRealtime(); // Jalankan radar real-time!
+        };
     </script>
 </body>
 </html>
