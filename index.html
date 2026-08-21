@@ -96,7 +96,7 @@
             
             <div class="flex items-center gap-3 w-full md:w-auto">
                 <div class="bg-slate-900 dark:bg-slate-700 text-white w-10 h-10 rounded-xl flex items-center justify-center text-xl shadow-lg shrink-0">
-                    <i class="fa-solid fa-camera-retro"></i>
+                    <i class="fa-solid fa-bolt"></i>
                 </div>
                 <div>
                     <h1 class="font-bold text-lg leading-tight tracking-tight text-slate-800 dark:text-white flex items-center gap-2">
@@ -113,7 +113,7 @@
                     <i class="fa-solid fa-images"></i> <span>Portal</span>
                 </button>
                 <button id="tab-sorter" onclick="switchApp('sorter')" class="px-4 md:px-5 py-2 rounded-lg text-sm font-bold text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 transition w-1/2 md:w-auto flex items-center justify-center gap-2">
-                    <i class="fa-solid fa-bolt"></i> <span>Sorter</span>
+                    <i class="fa-solid fa-folder-tree"></i> <span>Sorter</span>
                 </button>
             </div>
 
@@ -132,7 +132,7 @@
                     <i class="fa-solid fa-moon text-slate-600 dark:text-slate-300"></i>
                 </button>
 
-                <!-- TOMBOL ORDER (Menuju Link Scalev Anda) -->
+                <!-- TOMBOL ORDER -->
                 <a href="https://moodifypreset.myscalev.com/coquickselectandsorter" target="_blank" class="flex items-center justify-center px-4 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-bold transition shadow-md border border-blue-700">
                     <i class="fa-solid fa-cart-shopping"></i> <span class="ml-1 hidden sm:inline">Beli Full App</span><span class="sm:hidden ml-1">Beli</span>
                 </a>
@@ -208,7 +208,7 @@
                             <span id="currentFolderDisplay" data-i18n="galleryTitle">Koleksi Foto</span>
                         </h3>
                         <p class="text-sm text-slate-500 dark:text-slate-400 mt-1" data-i18n="galleryDesc">Klik gambar untuk memilih. Klik ikon <i class="fa-solid fa-magnifying-glass-plus text-slate-800 dark:text-white mx-1"></i> untuk perbesar & tambah catatan.</p>
-                        <p class="text-xs text-yellow-600 font-bold mt-1">Versi demo menampilkan maksimal 30 foto, batas pilihan maksimal 15 foto.</p>
+                        <p class="text-xs text-yellow-600 font-bold mt-1">Versi demo menarik seluruh foto di G-Drive dan menampilkan acak maksimal 30 foto, batas pilihan maksimal 15 foto.</p>
                     </div>
                     <div class="flex flex-wrap items-center gap-2">
                         <div class="relative">
@@ -259,13 +259,12 @@
             <i class="fa-solid fa-circle-info mt-0.5 text-blue-600 dark:text-blue-400"></i>
             <div>
                 <strong class="font-bold block mb-1">Informasi Penting Mode Demo:</strong>
-                Gunakan browser <b>Google Chrome</b> atau <b>Microsoft Edge</b>. Aplikasi ini akan mencari dan menyalin foto secara otomatis dan <b>dibatasi maksimal memproses 15 foto</b>. <br>
+                Gunakan browser <b>Google Chrome</b> atau <b>Microsoft Edge</b>. Aplikasi ini akan mencari dan menyalin foto secara otomatis. <b>Dibatasi maksimal memproses 15 foto</b>. <br>
                 <span class="text-red-600 dark:text-red-400 font-bold mt-1 block"><i class="fa-solid fa-triangle-exclamation"></i> Peringatan: Jangan muat ulang (refresh) halaman ini agar sesi uji coba Anda tidak hangus (berlaku 1x per IP).</span>
             </div>
         </div>
 
         <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-            <!-- Panel Kiri: Pengaturan Folder -->
             <div class="bg-white dark:bg-slate-800 rounded-2xl p-6 shadow-sm border border-slate-100 dark:border-slate-700 flex flex-col gap-4 relative overflow-hidden">
                 <h2 class="font-bold text-lg text-slate-800 dark:text-white border-b border-slate-100 dark:border-slate-700 pb-3"><i class="fa-solid fa-folder-tree mr-2 text-blue-600 dark:text-blue-400"></i> Pengaturan Folder</h2>
                 
@@ -289,7 +288,6 @@
                 </div>
             </div>
 
-            <!-- Panel Kanan: Input List -->
             <div class="bg-white dark:bg-slate-800 rounded-2xl p-6 shadow-sm border border-slate-100 dark:border-slate-700 flex flex-col">
                 <h2 class="font-bold text-lg text-slate-800 dark:text-white border-b border-slate-100 dark:border-slate-700 pb-3 mb-4"><i class="fa-solid fa-paste mr-2 text-blue-600 dark:text-blue-400"></i> List Foto dari Klien</h2>
                 <textarea id="fileList" class="w-full flex-grow bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-white rounded-xl p-4 text-sm focus:ring-2 focus:ring-blue-600 outline-none transition resize-none font-mono shadow-inner" placeholder="Paste daftar nama file dari WhatsApp klien di sini...&#10;&#10;Contoh:&#10;=======================&#10;LAYANAN : PORTAL CLIENT&#10;KLIEN : VERA & WENDY&#10;=======================&#10;&#10;1. WIJ07477&#10;2. WIJ07289&#10;   Catatan: Hapus jerawat"></textarea>
@@ -300,7 +298,6 @@
             <i class="fa-solid fa-bolt"></i> Mulai Sortir & Copy File (Maks 15 Foto)
         </button>
 
-        <!-- Panel Log / Terminal -->
         <div class="bg-slate-900 rounded-2xl p-6 shadow-lg overflow-hidden flex flex-col h-64 border border-slate-800">
             <div class="flex justify-between items-center mb-4 border-b border-slate-700 pb-2">
                 <h3 class="text-white font-bold text-sm"><i class="fa-solid fa-terminal mr-2 text-slate-400"></i> Proses Log</h3>
@@ -347,7 +344,7 @@
         </div>
     </div>
 
-    <!-- MODAL POPUP PREMIUM (NEW) -->
+    <!-- MODAL POPUP PREMIUM -->
     <div id="premiumModal" class="fixed inset-0 bg-slate-900/80 backdrop-blur-sm z-[100] hidden flex-col justify-center items-center opacity-0 transition-opacity duration-300 px-4">
         <div class="bg-white dark:bg-slate-800 border border-transparent dark:border-slate-700 rounded-3xl max-w-md w-full p-8 shadow-2xl transform scale-95 transition-transform duration-300 text-center relative" id="premiumContent">
             <div class="w-16 h-16 bg-blue-100 dark:bg-blue-900/50 text-blue-600 dark:text-blue-400 rounded-full flex items-center justify-center text-3xl mx-auto mb-4 shadow-inner">
@@ -473,7 +470,7 @@
             }
         }
 
-        // FUNGSI POPUP PREMIUM (NEW)
+        // FUNGSI POPUP PREMIUM
         function showPremiumPopup() {
             const modal = document.getElementById('premiumModal'), content = document.getElementById('premiumContent');
             modal.classList.remove('hidden'); modal.classList.add('flex');
@@ -668,9 +665,18 @@
                     appState.folders = fetched.filter(f => f.mimeType === 'application/vnd.google-apps.folder');
                     let pFiles = fetched.filter(f => f.mimeType !== 'application/vnd.google-apps.folder' && f.thumbnailLink);
                     
-                    // LIMIT MAKSIMAL 30 FOTO UNTUK DEMO MODE (TAMPILAN)
-                    appState.photos = pFiles.slice(0, 30).map(f => ({ id: f.id, name: f.name, folderName: displayTitle, url: f.thumbnailLink?.replace('=s220', '=s500'), fullUrl: f.thumbnailLink?.replace('=s220', '=s1600') }));
-                    appState.originalPhotos = [...appState.photos]; renderFolders(); document.getElementById('sortDropdown').value = 'random'; applySort('random');
+                    // PERBAIKAN LOGIKA RANDOM:
+                    // Simpan seluruh data foto ke dalam memori aplikasi (originalPhotos)
+                    appState.originalPhotos = pFiles.map(f => ({ 
+                        id: f.id, name: f.name, folderName: displayTitle, 
+                        url: f.thumbnailLink?.replace('=s220', '=s500'), 
+                        fullUrl: f.thumbnailLink?.replace('=s220', '=s1600') 
+                    }));
+
+                    // TAPI yang ditampilkan ke UI (photos) dibatasi maksimal 30 secara default
+                    appState.photos = appState.originalPhotos.slice(0, 30);
+                    
+                    renderFolders(); document.getElementById('sortDropdown').value = 'random'; applySort('random');
                     
                     if (!overrideId) setTimeout(() => { showTutorial(false); }, 800); else if(hasSeenTutorial) setTimeout(triggerTooltipsAnimation, 500);
                 } else { showAlert('Folder kosong/bukan Publik.', 'error'); document.getElementById('loadingState').classList.add('hidden'); }
@@ -691,18 +697,37 @@
             if(appState.folders.length === 0) g.innerHTML = `<p class="text-xs text-slate-500 col-span-full">Tidak ada sub-folder lagi.</p>`;
         }
         function navigateBackFolder() { if (appState.folderHistory.length) { const p = appState.folderHistory.pop(); loadFromDrive(p.id, p.name, true); } }
+        
         function applySort(order) {
             appState.sortOrder = order; const btnR = document.getElementById('btnReshuffle');
             if (order === 'random') { btnR.classList.remove('hidden'); document.getElementById('sortDropdown').value = 'random'; } 
             else { btnR.classList.add('hidden'); hideTooltip('reshuffleTooltip'); }
 
-            if (order === 'default') appState.photos = [...appState.originalPhotos];
-            else if (order === 'asc') appState.photos.sort((a, b) => a.name.localeCompare(b.name, undefined, {numeric: true}));
-            else if (order === 'desc') appState.photos.sort((a, b) => b.name.localeCompare(a.name, undefined, {numeric: true}));
-            else if (order === 'random') { let arr = [...appState.photos]; for (let i = arr.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [arr[i], arr[j]] = [arr[j], arr[i]]; } appState.photos = arr; }
+            // PENGATURAN LIMIT 30 FOTO UNTUK SETIAP SORTING
+            if (order === 'default') {
+                appState.photos = appState.originalPhotos.slice(0, 30);
+            }
+            else if (order === 'asc') {
+                let sorted = [...appState.originalPhotos].sort((a, b) => a.name.localeCompare(b.name, undefined, {numeric: true}));
+                appState.photos = sorted.slice(0, 30);
+            }
+            else if (order === 'desc') {
+                let sorted = [...appState.originalPhotos].sort((a, b) => b.name.localeCompare(a.name, undefined, {numeric: true}));
+                appState.photos = sorted.slice(0, 30);
+            }
+            else if (order === 'random') { 
+                let arr = [...appState.originalPhotos]; 
+                for (let i = arr.length - 1; i > 0; i--) { 
+                    const j = Math.floor(Math.random() * (i + 1)); 
+                    [arr[i], arr[j]] = [arr[j], arr[i]]; 
+                } 
+                appState.photos = arr.slice(0, 30); 
+            }
+            
             appState.currentPage = 1; renderGallery();
             if(order === 'random') { const i = btnR.querySelector('i'); i.classList.add('fa-spin'); setTimeout(() => i.classList.remove('fa-spin'), 500); }
         }
+
         function updateViewModeText() {
             const b = document.getElementById('viewModeBtn'), t = TRANSLATIONS[appState.lang];
             if (appState.viewMode === 'all') { b.innerHTML = `<i class="fa-solid fa-filter"></i> <span id="btnViewText">${t.btnViewSel}</span> (${appState.selectedMap.size})`; b.className = "text-sm bg-slate-800 dark:bg-slate-700 text-white py-2 px-4 rounded-lg font-medium transition flex items-center gap-2 shadow-sm hover:bg-slate-700 dark:hover:bg-slate-600"; } 
