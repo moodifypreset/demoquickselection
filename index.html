@@ -5,135 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title id="pageTitle">Client Portal</title>
     
-    <!-- SCRIPT SUPABASE & DEMO TRACKER -->
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script src="pengaturan.js"></script>
-    <script>
-        const db = supabase.createClient(CONFIG_APP.supabaseUrl, CONFIG_APP.supabaseKey);
-        let demoTimerInterval;
-        let userIpGlobal = null;
-        let isBurned = false;
-
-        // Fungsionalitas Status Online Real-time untuk Admin
-        function laporStatusOnline() {
-            const idPengunjung = 'visitor-' + Math.random().toString(36).substr(2, 9);
-            const room = db.channel('online_visitors', {
-                config: { presence: { key: idPengunjung } }
-            });
-            room.subscribe(async (status) => {
-                if (status === 'SUBSCRIBED') {
-                    await room.track({ online_at: new Date().toISOString() });
-                }
-            });
-        }
-
-        // Fungsi Kunci UI Saat Waktu Habis
-        function lockAppDemo() {
-            if (demoTimerInterval) clearInterval(demoTimerInterval);
-            const modal = document.getElementById('sessionEndedModal');
-            const content = document.getElementById('sessionEndedContent');
-            const alertBox = document.getElementById('customAlert');
-            if(alertBox) alertBox.classList.add('-translate-y-32', 'opacity-0');
-
-            if (modal) {
-                modal.classList.remove('hidden');
-                modal.classList.add('flex');
-            }
-            document.body.style.overflow = 'hidden'; 
-            
-            setTimeout(() => {
-                if (modal) modal.classList.replace('opacity-0', 'opacity-100');
-                if (content) content.classList.replace('scale-95', 'scale-100');
-            }, 10);
-        }
-
-        // Eksekusi Akhir 7 Menit (Kunci Layar & Input IP ke Database)
-        async function burnDemoAndLock() {
-            if (isBurned) return;
-            isBurned = true;
-            
-            lockAppDemo(); 
-            
-            if (userIpGlobal) {
-                const { data } = await db.from('demo_tracking').select('ip_address').eq('ip_address', userIpGlobal).maybeSingle();
-                if (!data) {
-                    await db.from('demo_tracking').insert([{ ip_address: userIpGlobal }]);
-                }
-            }
-        }
-
-        // Timer 7 Menit Berjalan Lintas Refresh
-        function startOrResumeTimer() {
-            const timerContainer = document.getElementById('demoTimerContainer');
-            const timerDisplay = document.getElementById('demoTimerDisplay');
-            
-            if (timerContainer) {
-                timerContainer.classList.remove('hidden');
-                timerContainer.classList.add('flex');
-            }
-
-            const now = Date.now();
-            let endTime = localStorage.getItem('demo_end_time');
-
-            if (!endTime) {
-                endTime = now + (7 * 60 * 1000); // 7 Menit
-                localStorage.setItem('demo_end_time', endTime);
-            }
-
-            function updateTimer() {
-                const currentTime = Date.now();
-                const timeLeft = Math.max(0, Math.floor((endTime - currentTime) / 1000));
-
-                let m = Math.floor(timeLeft / 60).toString().padStart(2, '0');
-                let s = (timeLeft % 60).toString().padStart(2, '0');
-                if (timerDisplay) timerDisplay.innerText = `${m}:${s}`;
-
-                if (timeLeft <= 0) {
-                    clearInterval(demoTimerInterval);
-                    burnDemoAndLock(); 
-                }
-            }
-
-            updateTimer(); 
-            demoTimerInterval = setInterval(updateTimer, 1000);
-        }
-
-        // Pengecekan Awal IP
-        async function initDemoTracking() {
-            laporStatusOnline(); 
-
-            try {
-                const ipRes = await fetch('https://api.ipify.org?format=json');
-                const ipData = await ipRes.json();
-                userIpGlobal = ipData.ip;
-
-                const { data, error } = await db
-                    .from('demo_tracking')
-                    .select('ip_address')
-                    .eq('ip_address', userIpGlobal)
-                    .maybeSingle(); 
-
-                if (data) {
-                    localStorage.removeItem('demo_end_time'); 
-                    lockAppDemo();
-                } else {
-                    let savedTime = localStorage.getItem('demo_end_time');
-                    if (savedTime && Date.now() >= parseInt(savedTime)) {
-                        localStorage.removeItem('demo_end_time'); 
-                    }
-                    startOrResumeTimer();
-                }
-            } catch (err) {
-                console.error("Gagal inisiasi IP:", err); 
-                startOrResumeTimer(); 
-            }
-        }
-        
-        document.addEventListener("DOMContentLoaded", () => {
-            initDemoTracking();
-        });
-    </script>
-    
     <script>
         tailwind = {
             config: {
@@ -197,18 +68,22 @@
             background-color: #2563eb; 
         }
     </style>
+    
+    <!-- SCRIPT PENGATURAN & SUPABASE HARUS DIMUAT LEBIH DULU -->
+    <script src="pengaturan.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body class="text-slate-800 dark:text-slate-200 bg-slate-50 dark:bg-slate-900 pb-32 flex flex-col min-h-screen">
 
     <header class="bg-white dark:bg-slate-800 shadow-sm border-b border-slate-200 dark:border-slate-700 sticky top-0 z-40 transition-colors duration-300">
-        <div class="max-w-6xl mx-auto px-4 py-4 flex justify-between items-center flex-wrap gap-3">
+        <div class="max-w-6xl mx-auto px-4 py-4 flex justify-between items-center flex-wrap gap-4">
             <div class="flex items-center gap-3">
                 <div class="bg-slate-900 dark:bg-slate-700 text-white w-10 h-10 rounded-xl flex items-center justify-center text-xl shadow-lg">
                     <i class="fa-solid fa-camera-retro"></i>
                 </div>
                 <div>
-                    <h1 class="font-bold text-lg leading-tight tracking-tight text-slate-800 dark:text-white flex items-center gap-2">
-                        <span id="headerVendorName">Client Portal</span>
+                    <h1 class="font-bold text-lg leading-tight tracking-tight text-slate-800 dark:text-white flex items-center gap-2" id="headerVendorName">
+                        Client Portal 
                         <span class="bg-yellow-500 text-white px-2 py-0.5 rounded text-[10px] font-bold shrink-0">DEMO</span>
                     </h1>
                     <p class="text-xs text-slate-500 dark:text-slate-400 font-medium uppercase tracking-wider" data-i18n="subtitle">Alat Seleksi Aman</p>
@@ -216,10 +91,16 @@
             </div>
             
             <div class="flex items-center gap-2 flex-wrap">
-                <!-- INDIKATOR WAKTU MUNDUR 7 MENIT -->
+                
+                <!-- INDIKATOR TIMER DEMO -->
                 <div id="demoTimerContainer" class="hidden items-center justify-center px-3 py-1.5 bg-red-100 dark:bg-red-900/50 text-red-600 dark:text-red-400 rounded-lg text-sm font-bold shadow-sm border border-red-200 dark:border-red-800" title="Sisa Waktu Demo">
                     <i class="fa-regular fa-clock animate-pulse mr-1.5"></i> <span id="demoTimerDisplay" class="font-mono">07:00</span>
                 </div>
+
+                <!-- TOMBOL BELI FULL APP -->
+                <a href="https://moodifypreset.myscalev.com/coquickselectandsorter" target="_blank" class="flex items-center justify-center px-4 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-bold transition shadow-md border border-blue-700">
+                    <i class="fa-solid fa-cart-shopping"></i> <span class="ml-1 hidden sm:inline">Beli Full App</span><span class="sm:hidden ml-1">Beli</span>
+                </a>
 
                 <button onclick="showTutorial(true)" class="flex items-center justify-center w-9 h-9 md:w-auto md:px-3 md:py-1.5 bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200 rounded-lg text-sm transition shadow-sm border border-slate-200 dark:border-slate-600" title="Panduan">
                     <i class="fa-solid fa-circle-question text-blue-600 dark:text-blue-400"></i> <span class="hidden md:inline ml-1 font-bold" data-i18n="btnGuide">Panduan</span>
@@ -244,7 +125,7 @@
                 
                 <div class="relative z-10">
                     <h2 class="text-2xl md:text-3xl font-bold mb-1"><span data-i18n="welcomeTitle">Hallo</span>, <span id="displayClientName" class="text-blue-400 capitalize">Kakak</span> 👋</h2>
-                    <p class="text-slate-300 text-sm md:text-base leading-relaxed" data-i18n="welcomeDesc">Selamat datang di portal seleksi foto dari {vendor}[cite: 1].</p>
+                    <p class="text-slate-300 text-sm md:text-base leading-relaxed" data-i18n="welcomeDesc">Selamat datang di portal seleksi foto dari {vendor}.</p>
                 </div>
                 
                 <div id="greetingQuotaInfo" class="hidden relative z-10 bg-slate-800/80 dark:bg-slate-900/80 backdrop-blur-md border border-slate-700 px-5 py-3 rounded-2xl items-center gap-4 shadow-inner">
@@ -260,6 +141,15 @@
         </div>
 
         <div class="max-w-6xl mx-auto px-4 py-8 w-full">
+            <!-- Peringatan Demo -->
+            <div class="bg-blue-50 dark:bg-blue-900/30 border border-blue-200 dark:border-blue-800 text-blue-800 dark:text-blue-300 rounded-xl p-4 mb-6 flex gap-3 text-sm shadow-sm max-w-2xl mx-auto">
+                <i class="fa-solid fa-circle-info mt-0.5 text-blue-600 dark:text-blue-400"></i>
+                <div>
+                    <strong class="font-bold block mb-1">Informasi Penting Mode Demo:</strong>
+                    Aplikasi ini dibatasi untuk menampilkan maksimal 30 foto secara acak dengan batas seleksi 15 foto. Waktu demo Anda berjalan global selama 7 menit.
+                </div>
+            </div>
+
             <div id="inputSection" class="bg-white dark:bg-slate-800 rounded-2xl p-8 shadow-sm border border-slate-100 dark:border-slate-700 mb-8 max-w-2xl mx-auto text-center relative overflow-hidden hidden transition-colors duration-300">
                 <div class="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-slate-200 via-slate-800 to-slate-200 dark:from-slate-700 dark:via-blue-500 dark:to-slate-700"></div>
                 <h2 class="text-xl font-bold mb-2 text-slate-800 dark:text-white" data-i18n="manualTitle">Akses Manual Galeri</h2>
@@ -307,6 +197,7 @@
                     </div>
                     <div class="flex flex-wrap items-center gap-2">
                         
+                        <!-- TOMBOL GRID DENGAN ANIMASI BALON TOOLTIP -->
                         <div class="relative">
                             <button onclick="hideTooltip('gridTooltip'); toggleGridSize()" class="text-sm bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-600 text-slate-700 dark:text-slate-200 py-2 px-3 rounded-lg font-medium cursor-pointer shadow-sm hover:bg-slate-50 dark:hover:bg-slate-700 transition" title="Ubah Ukuran Grid">
                                 <i class="fa-solid fa-table-cells-large"></i>
@@ -317,6 +208,7 @@
                             </div>
                         </div>
 
+                        <!-- DROPDOWN URUTAN -->
                         <div class="relative">
                             <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                                 <i class="fa-solid fa-arrow-down-a-z text-slate-400 text-sm"></i>
@@ -332,6 +224,7 @@
                             </div>
                         </div>
 
+                        <!-- TOMBOL ACAK LAGI DENGAN ANIMASI BALON TOOLTIP -->
                         <div class="relative">
                             <button id="btnReshuffle" onclick="hideTooltip('reshuffleTooltip'); applySort('random')" class="hidden text-sm bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-200 py-2 px-3 rounded-lg font-bold transition shadow-sm hover:bg-slate-200 dark:hover:bg-slate-600 border border-slate-300 dark:border-slate-600">
                                 <i class="fa-solid fa-dice"></i> <span class="hidden sm:inline ml-1" data-i18n="btnReshuffle">Acak Lagi</span>
@@ -355,7 +248,7 @@
     </main>
 
     <footer id="clientFooter" class="text-center py-6 mt-auto border-t border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 transition-colors">
-        <p class="text-sm text-slate-400">&copy; <script>document.write(new Date().getFullYear())</script> Layanan eksklusif oleh <span id="footerVendorName" class="font-medium text-slate-500 dark:text-slate-300">Portal</span>[cite: 1].</p>
+        <p class="text-sm text-slate-400">&copy; <script>document.write(new Date().getFullYear())</script> Layanan eksklusif oleh <span id="footerVendorName" class="font-medium text-slate-500 dark:text-slate-300">Portal</span>.</p>
     </footer>
 
     <!-- MODAL KUNCI LAYAR KETIKA WAKTU 7 MENIT HABIS -->
@@ -366,7 +259,6 @@
             </div>
             <h3 class="text-2xl font-black text-slate-800 dark:text-white mb-3 uppercase tracking-wide">Batas Akses Habis</h3>
             <p class="text-slate-500 dark:text-slate-400 text-sm mb-8 leading-relaxed">Akses Anda ditutup. Sesuai kebijakan kami, fitur demo dibatasi hanya untuk <b>satu kali percobaan</b> atau batas waktu maksimal <b>7 menit</b>.</p>
-            
             <a href="https://moodifypreset.myscalev.com/coquickselectandsorter" target="_blank" class="w-full py-4 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl transition shadow-lg shadow-blue-600/30 text-sm flex justify-center items-center gap-2 uppercase tracking-wide">
                 <i class="fa-solid fa-cart-shopping text-lg"></i> Beli Versi Full Sekarang
             </a>
@@ -430,7 +322,11 @@
                 </li>
                 <li class="flex items-start gap-4">
                     <div class="bg-blue-600 text-white w-8 h-8 rounded-full flex items-center justify-center font-bold shrink-0 shadow-md">3</div>
-                    <p class="text-sm text-slate-600 dark:text-slate-300 pt-1" data-i18n="tut4"><strong>Tampilan & Urutan:</strong> Klik ikon untuk mengubah jumlah baris grid foto.</p>
+                    <p class="text-sm text-slate-600 dark:text-slate-300 pt-1" data-i18n="tut4"><strong>Tampilan & Urutan:</strong> Klik ikon <i class="fa-solid fa-table-cells-large text-slate-800 dark:text-white mx-1"></i> untuk mengubah jumlah baris grid foto. Gunakan dropdown untuk melihat foto dalam <em>'Urutan Asli'</em> (berdasarkan jam foto) atau <em>'Acak'</em>. Klik tombol <em>'Lihat Pilihan'</em> untuk meninjau foto yang sudah dipilih.</p>
+                </li>
+                <li class="flex items-start gap-4">
+                    <div class="bg-blue-600 text-white w-8 h-8 rounded-full flex items-center justify-center font-bold shrink-0 shadow-md">4</div>
+                    <p class="text-sm text-slate-600 dark:text-slate-300 pt-1" data-i18n="tut3"><strong>Kirim List:</strong> Jika sudah selesai, klik tombol Kirim WA atau Download di bagian bawah layar.</p>
                 </li>
             </ul>
             <button onclick="closeTutorial()" class="w-full py-4 bg-slate-900 dark:bg-blue-600 hover:bg-black dark:hover:bg-blue-700 text-white font-bold rounded-xl transition shadow-lg text-sm uppercase tracking-wider" data-i18n="btnTut">
@@ -459,8 +355,123 @@
         </div>
     </div>
 
-    <!-- LOGIKA JAVASCRIPT -->
+    <!-- LOGIKA JAVASCRIPT UTAMA -->
     <script>
+        const db = typeof supabase !== 'undefined' ? supabase.createClient(CONFIG_APP.supabaseUrl, CONFIG_APP.supabaseKey) : null;
+        let demoTimerInterval;
+        let userIpGlobal = null;
+        let isBurned = false;
+
+        function laporStatusOnline() {
+            if(!db) return;
+            const idPengunjung = 'visitor-' + Math.random().toString(36).substr(2, 9);
+            const room = db.channel('online_visitors', {
+                config: { presence: { key: idPengunjung } }
+            });
+            room.subscribe(async (status) => {
+                if (status === 'SUBSCRIBED') {
+                    await room.track({ online_at: new Date().toISOString() });
+                }
+            });
+        }
+
+        function lockAppDemo() {
+            if (demoTimerInterval) clearInterval(demoTimerInterval);
+            const modal = document.getElementById('sessionEndedModal');
+            const content = document.getElementById('sessionEndedContent');
+            const alertBox = document.getElementById('customAlert');
+            if(alertBox) alertBox.classList.add('-translate-y-32', 'opacity-0');
+
+            if(modal) {
+                modal.classList.remove('hidden');
+                modal.classList.add('flex');
+            }
+            document.body.style.overflow = 'hidden'; 
+            
+            setTimeout(() => {
+                if(modal) modal.classList.replace('opacity-0', 'opacity-100');
+                if(content) content.classList.replace('scale-95', 'scale-100');
+            }, 10);
+        }
+
+        async function burnDemoAndLock() {
+            if (isBurned) return;
+            isBurned = true;
+            
+            lockAppDemo(); 
+            
+            if (userIpGlobal && db) {
+                const { data } = await db.from('demo_tracking').select('ip_address').eq('ip_address', userIpGlobal).maybeSingle();
+                if (!data) {
+                    await db.from('demo_tracking').insert([{ ip_address: userIpGlobal }]);
+                }
+            }
+        }
+
+        function startOrResumeTimer() {
+            const timerContainer = document.getElementById('demoTimerContainer');
+            const timerDisplay = document.getElementById('demoTimerDisplay');
+            
+            if (timerContainer) {
+                timerContainer.classList.remove('hidden');
+                timerContainer.classList.add('flex');
+            }
+
+            const now = Date.now();
+            let endTime = localStorage.getItem('demo_end_time');
+
+            if (!endTime) {
+                endTime = now + (7 * 60 * 1000); 
+                localStorage.setItem('demo_end_time', endTime);
+            }
+
+            function updateTimer() {
+                const currentTime = Date.now();
+                const timeLeft = Math.max(0, Math.floor((endTime - currentTime) / 1000));
+
+                let m = Math.floor(timeLeft / 60).toString().padStart(2, '0');
+                let s = (timeLeft % 60).toString().padStart(2, '0');
+                if(timerDisplay) timerDisplay.innerText = `${m}:${s}`;
+
+                if (timeLeft <= 0) {
+                    clearInterval(demoTimerInterval);
+                    burnDemoAndLock(); 
+                }
+            }
+
+            updateTimer(); 
+            demoTimerInterval = setInterval(updateTimer, 1000);
+        }
+
+        async function initDemoTracking() {
+            laporStatusOnline(); 
+
+            try {
+                const ipRes = await fetch('https://api.ipify.org?format=json');
+                const ipData = await ipRes.json();
+                userIpGlobal = ipData.ip;
+
+                if (db) {
+                    const { data, error } = await db.from('demo_tracking').select('ip_address').eq('ip_address', userIpGlobal).maybeSingle(); 
+                    if (data) {
+                        localStorage.removeItem('demo_end_time'); 
+                        lockAppDemo();
+                    } else {
+                        let savedTime = localStorage.getItem('demo_end_time');
+                        if (savedTime && Date.now() >= parseInt(savedTime)) {
+                            localStorage.removeItem('demo_end_time'); 
+                        }
+                        startOrResumeTimer();
+                    }
+                } else {
+                    startOrResumeTimer();
+                }
+            } catch (err) {
+                console.error("Gagal inisiasi IP:", err); 
+                startOrResumeTimer(); 
+            }
+        }
+
         const ITEMS_PER_PAGE = 200; 
         
         let appState = { 
@@ -476,7 +487,7 @@
             id: {
                 subtitle: "Alat Seleksi Aman",
                 welcomeTitle: "Hallo",
-                welcomeDesc: "Selamat datang di portal seleksi foto dari <span class='font-bold text-white'>{vendor}</span>[cite: 1].",
+                welcomeDesc: "Selamat datang di portal seleksi foto dari <span class='font-bold text-white'>{vendor}</span>.",
                 quotaTitle: "Kuota Paket",
                 quotaMax: "Foto Maksimal",
                 manualTitle: "Akses Manual Galeri",
@@ -486,7 +497,7 @@
                 folderTitle: "Sub-Folder Tersedia",
                 btnBackFolder: "Kembali",
                 galleryTitle: "Koleksi Foto",
-                galleryDesc: "Klik gambar untuk memilih.",
+                galleryDesc: "Klik gambar untuk memilih. Klik ikon untuk perbesar & tambah catatan.",
                 sortDefault: "Urutan Asli",
                 sortRandom: "Acak (Random)",
                 btnReshuffle: "Acak Lagi",
@@ -500,24 +511,25 @@
                 tutTitle: "Cara Memilih Foto",
                 tutDesc: "Ikuti panduan mudah ini untuk menyeleksi foto favorit Anda:",
                 tut1: "<strong>Pilih Foto:</strong> Klik (tap) langsung pada gambar foto untuk memilihnya.",
-                tut2: "<strong>Zoom & Catatan:</strong> Klik ikon untuk memperbesar gambar & tambah instruksi edit.",
-                tut3: "<strong>Kirim List:</strong> Jika sudah selesai, klik tombol Kirim WA atau Download di bagian bawah.",
+                tut2: "<strong>Zoom & Catatan:</strong> Klik ikon <i class='fa-solid fa-magnifying-glass-plus text-slate-800 dark:text-white mx-1'></i> untuk memperbesar gambar & tambah instruksi edit.",
+                tut4: "<strong>Tampilan & Urutan:</strong> Klik ikon <i class='fa-solid fa-table-cells-large text-slate-800 dark:text-white mx-1'></i> untuk mengubah jumlah baris grid foto. Gunakan dropdown untuk melihat foto dalam <em>'Urutan Asli'</em> (berdasarkan jam foto) atau <em>'Acak'</em>. Klik tombol <em>'Lihat Pilihan'</em> untuk meninjau foto yang sudah dipilih.",
+                tut3: "<strong>Kirim List:</strong> Jika sudah selesai, klik tombol Kirim WA atau Download di bagian bawah layar.",
                 btnTut: "Mengerti, Mulai Memilih!",
                 btnGuide: "Panduan",
                 swipe: "Geser kiri/kanan",
                 btnSelect: "Pilih Foto Ini",
                 btnSelected: "Terpilih",
-                notePlaceholder: "Catatan edit (opsional)...",
+                notePlaceholder: "Catatan edit (opsional), misal: hapus jerawat...",
                 alertLimit: "Batas maksimal limit foto telah tercapai!",
                 alertEmpty: "Belum ada foto yang dipilih.",
-                alertCopy: "List foto disalin!",
+                alertCopy: "List foto disalin! Silahkan paste di WhatsApp.",
                 gridTip: "Ubah Baris Foto",
                 reshuffleTip: "Tekan ini untuk acak foto"
             },
             en: {
                 subtitle: "Secure Selection Tool",
                 welcomeTitle: "Hello",
-                welcomeDesc: "Welcome to the photo selection portal from <span class='font-bold text-white'>{vendor}</span>[cite: 1].",
+                welcomeDesc: "Welcome to the photo selection portal from <span class='font-bold text-white'>{vendor}</span>.",
                 quotaTitle: "Package Quota",
                 quotaMax: "Max Photos",
                 manualTitle: "Manual Gallery Access",
@@ -527,7 +539,7 @@
                 folderTitle: "Available Sub-Folders",
                 btnBackFolder: "Go Back",
                 galleryTitle: "Photo Collection",
-                galleryDesc: "Click an image to select.",
+                galleryDesc: "Click an image to select. Click to zoom & add notes.",
                 sortDefault: "Original Order",
                 sortRandom: "Randomize",
                 btnReshuffle: "Shuffle Again",
@@ -539,19 +551,20 @@
                 btnDownload: "Download List",
                 btnWA: "Send via WA",
                 tutTitle: "How to Select Photos",
-                tutDesc: "Follow these simple steps:",
-                tut1: "<strong>Select Photo:</strong> Click directly on the image to select it.",
-                tut2: "<strong>Zoom & Notes:</strong> Click the icon to enlarge & add notes.",
-                tut3: "<strong>Send List:</strong> When finished, click send or download.",
+                tutDesc: "Follow these simple steps to select your favorite photos:",
+                tut1: "<strong>Select Photo:</strong> Click (tap) directly on the image to select it.",
+                tut2: "<strong>Zoom & Notes:</strong> Click the <i class='fa-solid fa-magnifying-glass-plus text-slate-800 dark:text-white mx-1'></i> icon to enlarge & add editing instructions.",
+                tut4: "<strong>View & Sort:</strong> Click the <i class='fa-solid fa-table-cells-large text-slate-800 dark:text-white mx-1'></i> icon to change grid layout. Use the dropdown to view photos in <em>'Original Order'</em> or <em>'Random'</em>. Click <em>'View Selection'</em> to review your chosen photos.",
+                tut3: "<strong>Send List:</strong> When finished, click the Send via WA or Download button at the bottom.",
                 btnTut: "Got it, Start Selecting!",
                 btnGuide: "Guide",
                 swipe: "Swipe left/right",
                 btnSelect: "Select This Photo",
                 btnSelected: "Selected",
-                notePlaceholder: "Edit notes (optional)...",
-                alertLimit: "Maximum photo limit reached!",
+                notePlaceholder: "Edit notes (optional), e.g., remove blemishes...",
+                alertLimit: "Maximum photo limit has been reached!",
                 alertEmpty: "No photos selected yet.",
-                alertCopy: "List copied!",
+                alertCopy: "List copied! Please paste it in WhatsApp.",
                 gridTip: "Change Grid Rows",
                 reshuffleTip: "Click to reshuffle"
             }
@@ -607,6 +620,70 @@
         let hasSeenTutorial = false; 
         let tooltipTimeout;
 
+        document.addEventListener("DOMContentLoaded", () => {
+            initDemoTracking();
+
+            updateDarkModeIcon(document.documentElement.classList.contains('dark'));
+
+            if (typeof CONFIG_APP !== 'undefined') {
+                document.getElementById('footerVendorName').textContent = CONFIG_APP.namaVendor || 'Studio Foto';
+                document.getElementById('pageTitle').textContent = `Client Portal - ${CONFIG_APP.namaVendor}`;
+                document.getElementById('headerVendorName').innerHTML = `Client Portal <span class="bg-yellow-500 text-white px-2 py-0.5 rounded text-[10px] font-bold shrink-0">DEMO</span>`;
+            }
+
+            const urlParams = new URLSearchParams(window.location.search);
+            const urlName = urlParams.get('n');
+            const urlKuota = urlParams.get('k');
+            const autoId = urlParams.get('i');
+
+            if (urlName) {
+                appState.clientName = decodeURIComponent(urlName).replace(/-/g, ' ');
+                document.getElementById('displayClientName').textContent = appState.clientName;
+                document.getElementById('greetingSection').classList.remove('hidden');
+            } else {
+                document.getElementById('displayClientName').textContent = "Kakak";
+            }
+            
+            if (urlKuota) {
+                try {
+                    let paddedKuota = urlKuota;
+                    const pad = urlKuota.length % 4;
+                    if (pad > 0) paddedKuota += '='.repeat(4 - pad);
+                    
+                    const decodedKuota = parseInt(atob(paddedKuota));
+                    if (!isNaN(decodedKuota) && decodedKuota > 0) {
+                        appState.kuota = decodedKuota;
+                        document.getElementById('quotaContainer').classList.remove('hidden');
+                        document.getElementById('quotaContainer').classList.add('block');
+                        document.getElementById('greetingQuotaInfo').classList.remove('hidden');
+                        document.getElementById('greetingQuotaInfo').classList.add('flex');
+                        document.getElementById('greetingQuotaLimit').textContent = appState.kuota;
+                    }
+                } catch (e) { console.error("Hash kuota tidak valid."); }
+            }
+
+            if (autoId) {
+                document.getElementById('driveLink').value = `https://drive.google.com/drive/folders/${autoId}`;
+                document.getElementById('inputSection').classList.add('hidden');
+                setTimeout(() => { loadFromDrive(); }, 500);
+            } else {
+                document.getElementById('inputSection').classList.remove('hidden');
+            }
+
+            const lightboxEl = document.getElementById('lightbox');
+            lightboxEl.addEventListener('touchstart', e => {
+                if (e.target.tagName.toLowerCase() === 'textarea') return;
+                touchstartX = e.changedTouches[0].screenX;
+            }, { passive: true });
+            lightboxEl.addEventListener('touchend', e => {
+                if (e.target.tagName.toLowerCase() === 'textarea') return;
+                touchendX = e.changedTouches[0].screenX;
+                handleSwipeGesture();
+            }, { passive: true });
+            
+            applyTranslations(); 
+        });
+
         function hideTooltip(id) {
             const el = document.getElementById(id);
             if(el) {
@@ -638,6 +715,7 @@
                 appState.gridMode = 2;
             }
             renderGallery();
+            
             const lang = appState.lang === 'id' ? 'Tampilan: ' + appState.gridMode + ' Foto per baris' : 'View: ' + appState.gridMode + ' Photos per row';
             showAlert(lang, 'success');
         }
@@ -719,42 +797,30 @@
             return url.match(/id=([a-zA-Z0-9-_]+)/)?.[1] || null;
         }
 
-        // ==========================================================
-        // MENGGUNAKAN MESIN ASLI ANDA YANG 100% LANCAR DI SUB-FOLDER
-        // ==========================================================
+        let isFetchingDrive = false;
+
         async function loadFromDrive(overrideFolderId = null, folderName = null, isNavigatingBack = false) {
             if (typeof CONFIG_APP === 'undefined' || !CONFIG_APP.googleApiKey) return showAlert('Sistem belum dikonfigurasi.', 'error');
             
+            if (isFetchingDrive) return;
+            isFetchingDrive = true;
+            
             let targetFolderId = overrideFolderId;
+            let previousFolderId = appState.folderId;
             
             if (!targetFolderId) {
                 const link = document.getElementById('driveLink').value.trim();
                 targetFolderId = extractFolderId(link) || link;
-                if (!targetFolderId) return showAlert('Link Google Drive tidak valid.', 'error');
-                
-                appState.rootFolderId = targetFolderId;
-                appState.folderHistory = [];
-                loadProgress(appState.rootFolderId); 
-                document.getElementById('inputSection').classList.add('hidden');
-            } else {
-                if (!isNavigatingBack) {
-                    const currentName = appState.folderHistory.length === 0 ? "Galeri Utama" : document.getElementById('currentFolderDisplay').innerText;
-                    appState.folderHistory.push({ id: appState.folderId, name: currentName });
-                }
+                if (!targetFolderId) {
+                    isFetchingDrive = false;
+                    return showAlert('Link Google Drive tidak valid.', 'error');
+                } 
             }
 
-            appState.folderId = targetFolderId;
-            appState.currentPage = 1; 
-            appState.viewMode = 'all';
-            
-            const displayTitle = (targetFolderId === appState.rootFolderId) ? TRANSLATIONS[appState.lang].galleryTitle : folderName;
-            document.getElementById('currentFolderDisplay').innerHTML = (targetFolderId === appState.rootFolderId) 
-                ? displayTitle 
-                : `<i class="fa-solid fa-folder-open text-blue-500 mr-2"></i> ${displayTitle}`;
-
+            document.getElementById('inputSection').classList.add('hidden');
+            document.getElementById('galleryContainer').classList.add('hidden');
             document.getElementById('loadingState').classList.remove('hidden');
             document.getElementById('loadingState').classList.add('flex');
-            document.getElementById('galleryContainer').classList.add('hidden');
             
             try {
                 let fetchedFiles = []; let nextPageToken = "";
@@ -764,9 +830,32 @@
                     if (nextPageToken) apiUrl += `&pageToken=${nextPageToken}`;
                     const response = await fetch(apiUrl);
                     const data = await response.json();
+                    
+                    if (!response.ok) throw new Error(data.error?.message || "Akses ditolak");
+
                     if (data.files) fetchedFiles = fetchedFiles.concat(data.files);
                     nextPageToken = data.nextPageToken;
                 } while (nextPageToken);
+
+                if (!overrideFolderId) {
+                    appState.rootFolderId = targetFolderId;
+                    appState.folderHistory = [];
+                    loadProgress(appState.rootFolderId);
+                } else if (!isNavigatingBack) {
+                    const currentName = appState.folderHistory.length === 0 ? "Galeri Utama" : document.getElementById('currentFolderDisplay').innerText;
+                    appState.folderHistory.push({ id: previousFolderId, name: currentName });
+                } else {
+                    appState.folderHistory.pop();
+                }
+
+                appState.folderId = targetFolderId;
+                appState.currentPage = 1; 
+                appState.viewMode = 'all';
+                
+                const displayTitle = (targetFolderId === appState.rootFolderId) ? TRANSLATIONS[appState.lang].galleryTitle : folderName;
+                document.getElementById('currentFolderDisplay').innerHTML = (targetFolderId === appState.rootFolderId) 
+                    ? displayTitle 
+                    : `<i class="fa-solid fa-folder-open text-blue-500 mr-2"></i> ${displayTitle}`;
 
                 if (fetchedFiles.length > 0 || appState.folderHistory.length > 0) {
                     appState.folders = fetchedFiles.filter(f => f.mimeType === 'application/vnd.google-apps.folder');
@@ -777,6 +866,9 @@
                         url: f.thumbnailLink?.replace('=s220', '=s500'), 
                         fullUrl: f.thumbnailLink?.replace('=s220', '=s1600') 
                     }));
+                    
+                    // Batasi untuk DEMO
+                    appState.photos = appState.photos.slice(0, 30);
                     appState.originalPhotos = [...appState.photos];
                     
                     renderFolders(); 
@@ -792,12 +884,23 @@
                 } else {
                     showAlert('Folder kosong atau hak akses bukan Publik.', 'error');
                     document.getElementById('loadingState').classList.add('hidden');
+                    document.getElementById('loadingState').classList.remove('flex');
                     document.getElementById('galleryContainer').classList.remove('hidden');
                 }
             } catch (error) {
+                console.error(error);
                 showAlert('Gagal terhubung ke Google Drive.', 'error');
+                
                 document.getElementById('loadingState').classList.add('hidden');
-                document.getElementById('galleryContainer').classList.remove('hidden');
+                document.getElementById('loadingState').classList.remove('flex');
+                
+                if (!previousFolderId || (previousFolderId === appState.rootFolderId && appState.photos.length === 0)) {
+                    document.getElementById('inputSection').classList.remove('hidden');
+                } else {
+                    document.getElementById('galleryContainer').classList.remove('hidden');
+                }
+            } finally {
+                isFetchingDrive = false;
             }
         }
 
@@ -834,7 +937,7 @@
 
         function navigateBackFolder() {
             if (appState.folderHistory.length === 0) return;
-            const prevFolder = appState.folderHistory.pop();
+            const prevFolder = appState.folderHistory[appState.folderHistory.length - 1];
             loadFromDrive(prevFolder.id, prevFolder.name, true);
         }
 
@@ -870,8 +973,10 @@
             
             if(order === 'random') {
                 const icon = btnReshuffle.querySelector('i');
-                icon.classList.add('fa-spin');
-                setTimeout(() => icon.classList.remove('fa-spin'), 500);
+                if (icon) {
+                    icon.classList.add('fa-spin');
+                    setTimeout(() => icon.classList.remove('fa-spin'), 500);
+                }
             }
         }
 
