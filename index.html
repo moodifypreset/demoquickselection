@@ -8,10 +8,30 @@
     <!-- 1. SCRIPT PENGATURAN HARUS DIMUAT LEBIH DULU -->
     <script src="pengaturan.js"></script>
 
-    <!-- 2. SCRIPT PELACAKAN IP & SUPABASE UNTUK DEMO -->
+    <!-- 2. SCRIPT PELACAKAN IP & KUNCI LAYAR -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script>
         const supabase = supabase.createClient(CONFIG_APP.supabaseUrl, CONFIG_APP.supabaseKey);
+
+        // Fungsi Global untuk Mengunci Layar Seketika Tanpa Refresh
+        function lockAppDemo() {
+            const modal = document.getElementById('sessionEndedModal');
+            const content = document.getElementById('sessionEndedContent');
+            
+            // Sembunyikan pop-up notifikasi lain (jika ada) agar tidak menimpa
+            const alertBox = document.getElementById('customAlert');
+            if(alertBox) alertBox.classList.add('-translate-y-32', 'opacity-0');
+
+            // Munculkan layar kunci
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+            document.body.style.overflow = 'hidden'; // Kunci scroll halaman
+            
+            setTimeout(() => {
+                modal.classList.replace('opacity-0', 'opacity-100');
+                content.classList.replace('scale-95', 'scale-100');
+            }, 10);
+        }
 
         async function checkDemoAccess() {
             try {
@@ -28,19 +48,9 @@
                 if (error) console.error("Error cek IP Supabase:", error);
 
                 if (data) {
-                    // IP DITEMUKAN: Munculkan Pop-up Batas Akses Habis (Kunci Layar)
-                    const modal = document.getElementById('sessionEndedModal');
-                    const content = document.getElementById('sessionEndedContent');
-                    modal.classList.remove('hidden');
-                    modal.classList.add('flex');
-                    document.body.style.overflow = 'hidden'; // Kunci scroll
-                    
-                    setTimeout(() => {
-                        modal.classList.replace('opacity-0', 'opacity-100');
-                        content.classList.replace('scale-95', 'scale-100');
-                    }, 50);
+                    // Jika IP sudah ada sejak awal buka, langsung kunci layarnya
+                    lockAppDemo();
                 } else {
-                    // IP BARU: Catat ke database
                     const { error: insertError } = await supabase.from('demo_tracking').insert([{ ip_address: userIp }]);
                     if (insertError) console.error("Gagal menyimpan IP:", insertError);
                 }
@@ -48,6 +58,8 @@
                 console.error("Sistem demo error:", err); 
             }
         }
+        
+        // Eksekusi sebelum halaman selesai dimuat
         checkDemoAccess();
     </script>
 
@@ -107,7 +119,6 @@
                         <span id="headerVendorName">Quick Selection & Sorter</span>
                         <span class="bg-yellow-500 text-white px-2 py-0.5 rounded text-[10px] font-bold shrink-0">DEMO</span>
                     </h1>
-                    <!-- BRANDING MOODIFY PRESET -->
                     <p class="text-[10px] text-blue-600 dark:text-blue-400 font-bold uppercase tracking-wider">by Moodify Preset</p>
                 </div>
             </div>
@@ -263,8 +274,7 @@
             <i class="fa-solid fa-circle-info mt-0.5 text-blue-600 dark:text-blue-400"></i>
             <div>
                 <strong class="font-bold block mb-1">Informasi Penting Mode Demo:</strong>
-                Gunakan browser <b>Google Chrome</b> atau <b>Microsoft Edge</b>. Aplikasi ini akan mencari dan menyalin foto secara otomatis dan <b>dibatasi maksimal memproses 15 foto</b>. <br>
-                <span class="text-red-600 dark:text-red-400 font-bold mt-1 block"><i class="fa-solid fa-triangle-exclamation"></i> Peringatan: Jangan muat ulang (refresh) halaman ini agar sesi uji coba Anda tidak hangus (berlaku 1x per IP).</span>
+                Gunakan browser <b>Google Chrome</b> atau <b>Microsoft Edge</b>. Aplikasi ini mencari dan menyalin foto secara otomatis dan <b>dibatasi maksimal memproses 15 foto</b>.
             </div>
         </div>
 
@@ -368,17 +378,19 @@
         </div>
     </div>
 
-    <!-- MODAL SESI DEMO BERAKHIR (NEW POP-UP LOCK) -->
-    <div id="sessionEndedModal" class="fixed inset-0 bg-slate-900/90 backdrop-blur-md z-[999] hidden flex-col justify-center items-center opacity-0 transition-opacity duration-500 px-4">
+    <!-- ============================================== -->
+    <!-- NEW: MODAL KUNCI LAYAR (AKHIR SESI DEMO)       -->
+    <!-- ============================================== -->
+    <div id="sessionEndedModal" class="fixed inset-0 bg-slate-900/95 backdrop-blur-md z-[9999] hidden flex-col justify-center items-center opacity-0 transition-opacity duration-500 px-4">
         <div class="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-3xl max-w-md w-full p-8 shadow-2xl text-center transform scale-95 transition-transform duration-500" id="sessionEndedContent">
             <div class="w-20 h-20 bg-red-100 dark:bg-red-900/50 text-red-600 dark:text-red-400 rounded-full flex items-center justify-center text-4xl mx-auto mb-6 shadow-inner">
                 <i class="fa-solid fa-stopwatch"></i>
             </div>
             <h3 class="text-2xl font-black text-slate-800 dark:text-white mb-3 uppercase tracking-wide">Batas Akses Habis</h3>
-            <p class="text-slate-500 dark:text-slate-400 text-sm mb-8 leading-relaxed">Terima kasih telah mencoba demo aplikasi ini. Sesi Anda telah berakhir. Sesuai kebijakan kami, fitur demo dibatasi hanya untuk satu kali penggunaan per perangkat/IP.</p>
+            <p class="text-slate-500 dark:text-slate-400 text-sm mb-8 leading-relaxed">Akses Anda ditutup. Sesuai kebijakan kami, fitur demo dibatasi hanya untuk <b>satu kali percobaan</b>. Silakan beli versi full untuk akses tanpa batas dan pemrosesan tak terhingga.</p>
             
             <a href="https://moodifypreset.myscalev.com/coquickselectandsorter" target="_blank" class="w-full py-4 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl transition shadow-lg shadow-blue-600/30 text-sm flex justify-center items-center gap-2 uppercase tracking-wide">
-                <i class="fa-solid fa-cart-shopping text-lg"></i> Order Sekarang Versi Full
+                <i class="fa-solid fa-cart-shopping text-lg"></i> Beli Versi Full
             </a>
         </div>
     </div>
@@ -445,11 +457,6 @@
     <!-- LOGIKA JAVASCRIPT GLOBAL & SELECTOR            -->
     <!-- ============================================== -->
     <script>
-        // FUNGSI LOCKDOWN AKHIR SESI DEMO
-        function endDemoSession() {
-            showAlert('Sesi demo selesai. Mengunci aplikasi dalam 3 detik...', 'success');
-            setTimeout(() => { window.location.reload(); }, 3500);
-        }
 
         function switchApp(appName) {
             const viewSelector = document.getElementById('view-selector'), viewSorter = document.getElementById('view-sorter'),
@@ -468,15 +475,6 @@
                 tabSelector.classList.replace('text-blue-600', 'text-slate-500'); tabSelector.classList.replace('dark:text-blue-400', 'dark:text-slate-400'); tabSelector.classList.remove('bg-white', 'dark:bg-slate-700', 'shadow-sm'); tabSelector.classList.add('hover:text-slate-700', 'dark:hover:text-slate-200');
                 btnTutorial.classList.add('hidden'); btnTutorial.classList.remove('flex'); actionBar.classList.add('translate-y-full');
             }
-        }
-
-        function showPremiumPopup() {
-            const modal = document.getElementById('premiumModal'), content = document.getElementById('premiumContent');
-            modal.classList.remove('hidden'); modal.classList.add('flex'); setTimeout(() => { modal.classList.replace('opacity-0', 'opacity-100'); content.classList.replace('scale-95', 'scale-100'); }, 10);
-        }
-        function closePremiumPopup() {
-            const modal = document.getElementById('premiumModal'), content = document.getElementById('premiumContent');
-            modal.classList.replace('opacity-100', 'opacity-0'); content.classList.replace('scale-100', 'scale-95'); setTimeout(() => { modal.classList.remove('flex'); modal.classList.add('hidden'); }, 300);
         }
 
         const ITEMS_PER_PAGE = 200; 
@@ -792,7 +790,8 @@
             const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([txt], { type: 'text/plain' }));
             a.download = `List_Pilihan_${(appState.clientName || 'klien').replace(/\s+/g, '_')}.txt`; document.body.appendChild(a); a.click(); document.body.removeChild(a);
             
-            endDemoSession();
+            // MENGUNCI LAYAR SEketika TANPA REFRESH
+            lockAppDemo();
         }
 
         function copyToClipboard() {
@@ -800,11 +799,16 @@
             const arr = Array.from(appState.selectedMap.values()), v = CONFIG_APP?.namaVendor || 'Studio', wa = CONFIG_APP?.whatsappAdmin || '';
             let txt = `*List Foto Pilihan Client*\nLayanan: ${v}\nKlien: *${appState.clientName}*\nTotal: ${arr.length} Foto\n\n`;
             arr.forEach((p, i) => { txt += `${i + 1}. ${p.name}\n`; if (appState.notes[p.id]) txt += `   _Catatan: ${appState.notes[p.id]}_\n`; });
-            if (wa) { window.open(`https://wa.me/${wa}?text=${encodeURIComponent(txt)}`, '_blank'); endDemoSession(); }
-            else {
+            
+            if (wa) { 
+                window.open(`https://wa.me/${wa}?text=${encodeURIComponent(txt)}`, '_blank'); 
+                // MENGUNCI LAYAR SEketika TANPA REFRESH
+                lockAppDemo(); 
+            } else {
                 const ta = document.createElement("textarea"); ta.value = txt; ta.style.position = "fixed"; document.body.appendChild(ta); ta.focus(); ta.select();
                 try { if (document.execCommand('copy')) showAlert(TRANSLATIONS[appState.lang].alertCopy); } catch(e){} document.body.removeChild(ta);
-                endDemoSession();
+                // MENGUNCI LAYAR SEketika TANPA REFRESH
+                lockAppDemo();
             }
         }
 
@@ -917,7 +921,8 @@
             } catch (e) { addLog(`Error: ${e.message}`, "error"); } 
             finally { 
                 b.disabled = false; b.innerHTML = `<i class="fa-solid fa-bolt mr-2"></i> Mulai Sortir & Copy File (Maks 15 Foto)`; b.className = "w-full py-4 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl flex items-center justify-center gap-2 shadow-lg shadow-blue-600/30 mb-6 text-lg"; 
-                endDemoSession();
+                // MENGUNCI LAYAR SEketika TANPA REFRESH
+                lockAppDemo();
             }
         }
     </script>
