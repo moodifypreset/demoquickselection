@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title id="pageTitle">Quick Selection Tools - Demo</title>
+    <title id="pageTitle">Selecta Photo Tools - Demo</title>
     
     <!-- SCRIPT PELACAKAN IP & SUPABASE UNTUK DEMO -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -106,21 +106,33 @@
             
             <!-- MENU TAB NAVIGASI -->
             <div class="flex bg-slate-100 dark:bg-slate-900 p-1 rounded-xl shadow-inner w-full md:w-auto justify-center">
-                <button id="tab-selector" onclick="switchApp('selector')" class="px-5 py-2 bg-white dark:bg-slate-700 shadow-sm rounded-lg text-sm font-bold text-blue-600 dark:text-blue-400 transition w-1/2 md:w-auto flex items-center justify-center gap-2">
-                    <i class="fa-solid fa-images"></i> <span>Client Portal</span>
+                <button id="tab-selector" onclick="switchApp('selector')" class="px-4 md:px-5 py-2 bg-white dark:bg-slate-700 shadow-sm rounded-lg text-sm font-bold text-blue-600 dark:text-blue-400 transition w-1/2 md:w-auto flex items-center justify-center gap-2">
+                    <i class="fa-solid fa-images"></i> <span>Portal</span>
                 </button>
-                <button id="tab-sorter" onclick="switchApp('sorter')" class="px-5 py-2 rounded-lg text-sm font-bold text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 transition w-1/2 md:w-auto flex items-center justify-center gap-2">
-                    <i class="fa-solid fa-bolt"></i> <span>RAW Sorter</span>
+                <button id="tab-sorter" onclick="switchApp('sorter')" class="px-4 md:px-5 py-2 rounded-lg text-sm font-bold text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 transition w-1/2 md:w-auto flex items-center justify-center gap-2">
+                    <i class="fa-solid fa-bolt"></i> <span>Sorter</span>
                 </button>
             </div>
 
-            <div class="flex items-center gap-2 hidden md:flex">
-                <button onclick="showTutorial(true)" id="btnTutorial" class="flex items-center justify-center px-3 py-1.5 bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200 rounded-lg text-sm transition shadow-sm border border-slate-200 dark:border-slate-600">
-                    <i class="fa-solid fa-circle-question text-blue-600 dark:text-blue-400"></i> <span class="ml-1 font-bold" data-i18n="btnGuide">Panduan</span>
+            <!-- TOMBOL FITUR & ORDER -->
+            <div class="flex items-center gap-2 w-full md:w-auto justify-center md:justify-end flex-wrap">
+                
+                <button onclick="showPremiumPopup()" class="flex items-center justify-center px-3 py-1.5 bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200 rounded-lg text-sm transition shadow-sm border border-slate-200 dark:border-slate-600" title="Generate Link">
+                    <i class="fa-solid fa-link text-blue-600 dark:text-blue-400"></i> <span class="hidden lg:inline ml-1 font-bold">Generate Link</span>
                 </button>
+
+                <button onclick="showTutorial(true)" id="btnTutorial" class="flex items-center justify-center px-3 py-1.5 bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200 rounded-lg text-sm transition shadow-sm border border-slate-200 dark:border-slate-600">
+                    <i class="fa-solid fa-circle-question text-blue-600 dark:text-blue-400"></i> <span class="hidden lg:inline ml-1 font-bold" data-i18n="btnGuide">Panduan</span>
+                </button>
+                
                 <button onclick="toggleDarkMode()" id="darkModeBtn" class="flex items-center justify-center w-9 h-9 bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 rounded-lg text-sm transition shadow-sm border border-slate-200 dark:border-slate-600">
                     <i class="fa-solid fa-moon text-slate-600 dark:text-slate-300"></i>
                 </button>
+
+                <!-- TOMBOL ORDER (Menuju Link Scalev Anda) -->
+                <a href="https://moodifypreset.myscalev.com/coquickselectandsorter" target="_blank" class="flex items-center justify-center px-4 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-bold transition shadow-md border border-blue-700">
+                    <i class="fa-solid fa-cart-shopping"></i> <span class="ml-1 hidden sm:inline">Beli Full App</span><span class="sm:hidden ml-1">Beli</span>
+                </a>
             </div>
         </div>
     </header>
@@ -136,7 +148,8 @@
                     <i class="fa-solid fa-camera-retro text-[150px]"></i>
                 </div>
                 <div class="relative z-10">
-                    <h2 class="text-2xl md:text-3xl font-bold mb-1"><span data-i18n="welcomeTitle">Hallo</span>, <span id="displayClientName" class="text-blue-400 capitalize">Kakak</span> 窓</h2>
+                    <!-- FIX: Menghapus emoji yang rusak dan mengganti dengan 👋 -->
+                    <h2 class="text-2xl md:text-3xl font-bold mb-1"><span data-i18n="welcomeTitle">Hallo</span>, <span id="displayClientName" class="text-blue-400 capitalize">Kakak</span> 👋</h2>
                     <p class="text-slate-300 text-sm md:text-base leading-relaxed" data-i18n="welcomeDesc">Selamat datang di portal seleksi foto.</p>
                 </div>
                 <div id="greetingQuotaInfo" class="hidden relative z-10 bg-slate-800/80 dark:bg-slate-900/80 backdrop-blur-md border border-slate-700 px-5 py-3 rounded-2xl items-center gap-4 shadow-inner">
@@ -192,7 +205,8 @@
                         <h3 class="font-bold text-xl text-slate-800 dark:text-white flex items-center gap-2">
                             <span id="currentFolderDisplay" data-i18n="galleryTitle">Koleksi Foto</span>
                         </h3>
-                        <p class="text-sm text-slate-500 dark:text-slate-400 mt-1" data-i18n="galleryDesc">Klik gambar untuk memilih. Klik ikon 剥 untuk perbesar & tambah catatan.</p>
+                        <!-- FIX: Mengubah ikon aneh dengan tag FontAwesome yang benar -->
+                        <p class="text-sm text-slate-500 dark:text-slate-400 mt-1" data-i18n="galleryDesc">Klik gambar untuk memilih. Klik ikon <i class="fa-solid fa-magnifying-glass-plus text-slate-800 dark:text-white mx-1"></i> untuk perbesar & tambah catatan.</p>
                         <p class="text-xs text-yellow-600 font-bold mt-1">Versi demo dibatasi menampilkan maksimal 15 foto.</p>
                     </div>
                     <div class="flex flex-wrap items-center gap-2">
@@ -255,7 +269,7 @@
                 
                 <div>
                     <label class="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-2">1. Folder Sumber (RAW Asli)</label>
-                    <p class="text-[11px] text-slate-400 mb-3 leading-relaxed">Pilih folder induk, sistem akan mencari otomatis ke dalam sub-folder (Cam 1, Cam 2, dll).</p>
+                    <p class="text-[11px] text-slate-400 mb-3 leading-relaxed">Pilih folder induk, sistem mencari otomatis ke sub-folder (Cam 1, Cam 2, dll).</p>
                     <button id="btnSource" onclick="selectSource()" class="w-full py-3 bg-slate-50 dark:bg-slate-900 hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 font-semibold rounded-xl transition flex items-center justify-center gap-2 border border-slate-200 dark:border-slate-600 shadow-sm">
                         <i class="fa-regular fa-folder-open text-blue-500"></i> Pilih Folder Sumber
                     </button>
@@ -331,7 +345,28 @@
         </div>
     </div>
 
-    <!-- MODAL & ALERT -->
+    <!-- MODAL POPUP PREMIUM (NEW) -->
+    <div id="premiumModal" class="fixed inset-0 bg-slate-900/80 backdrop-blur-sm z-[100] hidden flex-col justify-center items-center opacity-0 transition-opacity duration-300 px-4">
+        <div class="bg-white dark:bg-slate-800 border border-transparent dark:border-slate-700 rounded-3xl max-w-md w-full p-8 shadow-2xl transform scale-95 transition-transform duration-300 text-center relative" id="premiumContent">
+            <!-- Icon Lock -->
+            <div class="w-16 h-16 bg-blue-100 dark:bg-blue-900/50 text-blue-600 dark:text-blue-400 rounded-full flex items-center justify-center text-3xl mx-auto mb-4 shadow-inner">
+                <i class="fa-solid fa-lock"></i>
+            </div>
+            <h3 class="text-2xl font-bold text-slate-800 dark:text-white mb-2">Fitur Terkunci</h3>
+            <p class="text-slate-500 dark:text-slate-400 text-sm mb-6 leading-relaxed">Maaf, fitur pembuatan link akses otomatis (Generate Link) untuk klien hanya tersedia pada versi Full. Upgrade sekarang untuk pengalaman tanpa batas!</p>
+            
+            <div class="flex flex-col gap-3">
+                <a href="https://moodifypreset.myscalev.com/coquickselectandsorter" target="_blank" class="w-full py-3.5 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl transition shadow-lg text-sm flex justify-center items-center gap-2">
+                    <i class="fa-solid fa-cart-shopping"></i> Beli Versi Full Sekarang
+                </a>
+                <button onclick="closePremiumPopup()" class="w-full py-3.5 bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200 font-bold rounded-xl transition shadow-sm border border-slate-200 dark:border-slate-600 text-sm">
+                    Nanti Saja
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL & ALERT (EXISTING) -->
     <div id="customAlert" class="fixed top-4 left-1/2 -translate-x-1/2 bg-slate-900 dark:bg-slate-800 border border-transparent dark:border-slate-600 text-white px-6 py-4 rounded-xl shadow-2xl z-[99] flex items-center gap-3 transition-all duration-300 transform -translate-y-32 opacity-0 min-w-[300px] justify-center">
         <i id="alertIcon" class="fa-solid fa-circle-check text-green-400 text-lg"></i>
         <span id="alertText" class="text-sm font-bold tracking-wide">Notifikasi</span>
@@ -406,7 +441,6 @@
                 viewSelector.classList.remove('hidden'); viewSelector.classList.add('flex');
                 viewSorter.classList.add('hidden'); viewSorter.classList.remove('flex');
                 
-                // Styling Tab
                 tabSelector.classList.replace('text-slate-500', 'text-blue-600');
                 tabSelector.classList.replace('dark:text-slate-400', 'dark:text-blue-400');
                 tabSelector.classList.add('bg-white', 'dark:bg-slate-700', 'shadow-sm');
@@ -417,14 +451,12 @@
                 tabSorter.classList.remove('bg-white', 'dark:bg-slate-700', 'shadow-sm');
                 tabSorter.classList.add('hover:text-slate-700', 'dark:hover:text-slate-200');
 
-                btnTutorial.classList.remove('hidden');
-                btnTutorial.classList.add('flex');
+                btnTutorial.classList.remove('hidden'); btnTutorial.classList.add('flex');
                 if(appState.selectedMap && appState.selectedMap.size > 0) actionBar.classList.remove('translate-y-full');
             } else {
                 viewSelector.classList.add('hidden'); viewSelector.classList.remove('flex');
                 viewSorter.classList.remove('hidden'); viewSorter.classList.add('flex');
                 
-                // Styling Tab
                 tabSorter.classList.replace('text-slate-500', 'text-blue-600');
                 tabSorter.classList.replace('dark:text-slate-400', 'dark:text-blue-400');
                 tabSorter.classList.add('bg-white', 'dark:bg-slate-700', 'shadow-sm');
@@ -435,10 +467,21 @@
                 tabSelector.classList.remove('bg-white', 'dark:bg-slate-700', 'shadow-sm');
                 tabSelector.classList.add('hover:text-slate-700', 'dark:hover:text-slate-200');
                 
-                btnTutorial.classList.add('hidden');
-                btnTutorial.classList.remove('flex');
+                btnTutorial.classList.add('hidden'); btnTutorial.classList.remove('flex');
                 actionBar.classList.add('translate-y-full');
             }
+        }
+
+        // FUNGSI POPUP PREMIUM (NEW)
+        function showPremiumPopup() {
+            const modal = document.getElementById('premiumModal'), content = document.getElementById('premiumContent');
+            modal.classList.remove('hidden'); modal.classList.add('flex');
+            setTimeout(() => { modal.classList.replace('opacity-0', 'opacity-100'); content.classList.replace('scale-95', 'scale-100'); }, 10);
+        }
+        function closePremiumPopup() {
+            const modal = document.getElementById('premiumModal'), content = document.getElementById('premiumContent');
+            modal.classList.replace('opacity-100', 'opacity-0'); content.classList.replace('scale-100', 'scale-95');
+            setTimeout(() => { modal.classList.remove('flex'); modal.classList.add('hidden'); }, 300);
         }
 
         // ==========================================
@@ -457,7 +500,7 @@
                 subtitle: "Alat Seleksi Aman", welcomeTitle: "Hallo", welcomeDesc: "Selamat datang di portal seleksi foto dari <span class='font-bold text-white'>{vendor}</span>.",
                 quotaTitle: "Kuota Paket", quotaMax: "Foto Maksimal", manualTitle: "Akses Manual Galeri", manualDesc: "Silakan tempel (paste) link folder Google Drive Anda di bawah ini.",
                 btnOpen: "Buka Galeri", loading: "Menarik data dari Google Drive...", folderTitle: "Sub-Folder Tersedia", btnBackFolder: "Kembali",
-                galleryTitle: "Koleksi Foto", galleryDesc: "Klik gambar untuk memilih. Klik ikon 剥 untuk perbesar & tambah catatan.",
+                galleryTitle: "Koleksi Foto", galleryDesc: "Klik gambar untuk memilih. Klik ikon <i class='fa-solid fa-magnifying-glass-plus text-slate-800 dark:text-white mx-1'></i> untuk perbesar & tambah catatan.",
                 sortDefault: "Urutan Asli", sortRandom: "Acak (Random)", btnReshuffle: "Acak Lagi", btnViewSel: "Lihat Pilihan", btnViewAll: "Lihat Semua Folder",
                 quotaFooter: "Kuota Paket Anda", selFooterTitle: "Foto Terpilih", selFooterDesc: "Kirim daftar ini ke tim kami", btnDownload: "Download List", btnWA: "Kirim WA",
                 tutTitle: "Cara Memilih Foto", tutDesc: "Ikuti panduan mudah ini untuk menyeleksi foto favorit Anda:",
@@ -472,7 +515,7 @@
                 subtitle: "Secure Selection Tool", welcomeTitle: "Hello", welcomeDesc: "Welcome to the photo selection portal from <span class='font-bold text-white'>{vendor}</span>.",
                 quotaTitle: "Package Quota", quotaMax: "Max Photos", manualTitle: "Manual Gallery Access", manualDesc: "Please paste your Google Drive folder link below.",
                 btnOpen: "Open Gallery", loading: "Fetching data from Google Drive...", folderTitle: "Available Sub-Folders", btnBackFolder: "Go Back",
-                galleryTitle: "Photo Collection", galleryDesc: "Click an image to select. Click 剥 to zoom & add notes.",
+                galleryTitle: "Photo Collection", galleryDesc: "Click an image to select. Click <i class='fa-solid fa-magnifying-glass-plus text-slate-800 dark:text-white mx-1'></i> to zoom & add notes.",
                 sortDefault: "Original Order", sortRandom: "Randomize", btnReshuffle: "Shuffle Again", btnViewSel: "View Selection", btnViewAll: "View All Folders",
                 quotaFooter: "Your Package Quota", selFooterTitle: "Selected Photos", selFooterDesc: "Send this list to our team", btnDownload: "Download List", btnWA: "Send via WA",
                 tutTitle: "How to Select Photos", tutDesc: "Follow these simple steps:",
