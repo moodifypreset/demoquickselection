@@ -682,33 +682,40 @@
         }
 
         // ==========================================
-        // PERBAIKAN LOGIKA LOAD FROM DRIVE (ANTI-STUCK)
+        // PERBAIKAN LOGIKA LOAD FROM DRIVE (ANTI-STUCK KETAT)
         // ==========================================
         let isFetchingDrive = false;
 
         async function loadFromDrive(overrideId = null, folderName = null, isNavBack = false) {
-            if (typeof CONFIG_APP === 'undefined' || !CONFIG_APP.googleApiKey) return showAlert('Sistem belum dikonfigurasi.', 'error');
-            
-            // Cegah double-click yang memicu error tabrakan
+            // Cegah double-click yang membekukan sistem
             if (isFetchingDrive) return;
             isFetchingDrive = true;
 
-            let targetId = overrideId;
-            if (!targetId) {
-                targetId = extractFolderId(document.getElementById('driveLink').value.trim()) || document.getElementById('driveLink').value.trim();
-                if (!targetId) { isFetchingDrive = false; return showAlert('Link Google Drive tidak valid.', 'error'); }
-                appState.rootFolderId = targetId; 
-                appState.folderHistory = []; 
-                loadProgress(appState.rootFolderId); 
-            }
-
-            // Sembunyikan panel secara aman dan munculkan Loading
-            document.getElementById('inputSection').classList.add('hidden');
-            document.getElementById('galleryContainer').classList.add('hidden');
-            document.getElementById('loadingState').classList.remove('hidden'); 
-            document.getElementById('loadingState').classList.add('flex');
+            let targetId = overrideId; // Deklarasi di luar agar dikenali oleh Catch
 
             try {
+                if (typeof CONFIG_APP === 'undefined' || !CONFIG_APP.googleApiKey) {
+                    throw new Error("Sistem (API Key) belum dikonfigurasi.");
+                }
+
+                if (!targetId) {
+                    const rawUrl = document.getElementById('driveLink').value.trim();
+                    targetId = extractFolderId(rawUrl) || rawUrl;
+                    
+                    if (!targetId) { 
+                        throw new Error("Link Google Drive tidak valid/kosong.");
+                    }
+                    appState.rootFolderId = targetId; 
+                    appState.folderHistory = []; 
+                    loadProgress(appState.rootFolderId); 
+                }
+
+                // Sembunyikan form dan paksa munculkan Loading
+                document.getElementById('inputSection').classList.add('hidden');
+                document.getElementById('galleryContainer').classList.add('hidden');
+                document.getElementById('loadingState').classList.remove('hidden'); 
+                document.getElementById('loadingState').classList.add('flex');
+
                 let fetched = []; 
                 let token = ""; 
                 const q = encodeURIComponent(`'${targetId}' in parents and trashed=false`);
@@ -721,14 +728,13 @@
                     const data = await res.json();
                     
                     if (!res.ok) {
-                        throw new Error(data.error?.message || "Akses ditolak oleh Google");
+                        throw new Error(data.error?.message || "Akses ditolak. Cek hak akses folder Drive Anda.");
                     }
 
                     if (data.files) fetched = fetched.concat(data.files); 
                     token = data.nextPageToken;
                 } while (token);
 
-                // Catat Riwayat Sub-folder jika bukan root dan bukan menekan tombol kembali
                 if (targetId !== appState.rootFolderId && !isNavBack) {
                     appState.folderHistory.push({ 
                         id: appState.folderId, 
@@ -750,12 +756,10 @@
                     id: f.id, name: f.name, folderName: displayTitle, 
                     url: f.thumbnailLink?.replace('=s220', '=s500'), fullUrl: f.thumbnailLink?.replace('=s220', '=s1600') 
                 }));
-                appState.photos = appState.originalPhotos.slice(0, 30); // Batas 30 foto demo
+                appState.photos = appState.originalPhotos.slice(0, 30);
                 
                 renderFolders(); 
                 document.getElementById('sortDropdown').value = 'random'; 
-                
-                // Menerapkan sort yang otomatis memunculkan layar galeri
                 applySort('random'); 
                 
                 if (!overrideId) setTimeout(() => { showTutorial(false); }, 800); 
@@ -765,24 +769,22 @@
                 console.error("Fetch Drive Error:", e);
                 showAlert(`Gagal: ${e.message}`, 'error'); 
                 
-                // === PENGAMANAN ANTI STUCK (BLANK SCREEN) ===
+                // === PENGAMANAN ANTI STUCK (KEMBALIKAN TAMPILAN) ===
                 document.getElementById('loadingState').classList.add('hidden'); 
                 document.getElementById('loadingState').classList.remove('flex');
                 
-                if (targetId === appState.rootFolderId) {
-                    // Jika gagal saat awal masuk -> Munculkan form input lagi
+                // Jika error terjadi di layar depan (input link)
+                if (!targetId || targetId === appState.rootFolderId) {
                     document.getElementById('inputSection').classList.remove('hidden');
                 } else {
-                    // Jika gagal saat masuk sub-folder -> Kembalikan tampilan galeri sebelumnya
+                    // Jika error terjadi saat masuk ke dalam sub-folder
                     document.getElementById('galleryContainer').classList.remove('hidden');
-                    
-                    // Buang riwayat folder yang cacat ini agar tombol 'kembali' tetap berfungsi benar
                     if (!isNavBack && appState.folderHistory.length > 0) {
-                        appState.folderHistory.pop();
+                        appState.folderHistory.pop(); // Buang rekam jejak yang gagal
                     }
                 }
             } finally {
-                // Pastikan selalu dilepas gembok double-clicknya
+                // SANGAT PENTING: Selalu buka gembok klik ini apapun yang terjadi!
                 isFetchingDrive = false;
             }
         }
