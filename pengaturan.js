@@ -15,5 +15,5 @@ const CONFIG_APP = {
 
     // 4. Konfigurasi Supabase (Untuk Demo Mode)
     supabaseUrl: "https://ygoawyedjxcxxnhlbtit.supabase.co",
-    supabaseKey: "sb_publishable_El7jjrn0WyxR09b8wRkdoQ_BDFhXXa-"
+    supabaseKey: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inlnb2F3eWVkanhjeHhuaGxidGl0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODcyNTQ1NDMsImV4cCI6MjEwMjgzMDU0M30.qBH1iyMv_RWMUkgZMVd-YP0mJfp-ATUqfHZU7nzclUc"
 };
