@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tes Koneksi Database</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        body { font-family: sans-serif; padding: 40px; text-align: center; }
+        #status { padding: 20px; font-weight: bold; border-radius: 8px; margin-top: 20px; background: #f1f5f9; }
+    </style>
+</head>
+<body>
+    <h2>Uji Coba Pengiriman Data ke Supabase</h2>
+    <p>Script ini akan mencoba mengirim IP bohongan (123.456.789.xxx) ke database Anda.</p>
+    <div id="status">Memulai pengujian... mohon tunggu.</div>
+
+    <script>
+        // 1. Masukkan API Key dan URL Anda langsung di sini
+        const supabaseUrl = 'https://ygoawyedjxcxxnhlbtit.supabase.co';
+        const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inlnb2F3eWVkanhjeHhuaGxidGl0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODcyNTQ1NDMsImV4cCI6MjEwMjgzMDU0M30.qBH1iyMv_RWMUkgZMVd-YP0mJfp-ATUqfHZU7nzclUc';
+        const supabase = supabase.createClient(supabaseUrl, supabaseKey);
+
+        async function jalankanTes() {
+            const statusBox = document.getElementById('status');
+            
+            // Membuat IP Bohongan yang acak agar tidak bentrok
+            const ipBohongan = "123.456.789." + Math.floor(Math.random() * 1000);
+            statusBox.innerHTML = `Mencoba mengetuk pintu database dengan IP: ${ipBohongan}...`;
+
+            try {
+                const { error } = await supabase
+                    .from('demo_tracking')
+                    .insert([{ ip_address: ipBohongan }]);
+
+                if (error) {
+                    // JIKA GAGAL
+                    statusBox.innerHTML = `<span style="color: red;">❌ GAGAL MASUK!</span><br><br>Pesan Error dari Supabase:<br><code style="background:#fee2e2; padding:10px; display:block; margin-top:10px; color:#991b1b;">${error.message}</code>`;
+                } else {
+                    // JIKA BERHASIL
+                    statusBox.innerHTML = `<span style="color: green;">✅ SUKSES BESAR!</span><br><br>Koneksi lancar! Silakan cek Supabase atau halaman admin Anda, data <b>${ipBohongan}</b> pasti sudah masuk.`;
+                }
+            } catch (err) {
+                statusBox.innerHTML = `<span style="color: red;">❌ TERJADI KESALAHAN SISTEM: ${err.message}</span>`;
+            }
+        }
+
+        // Jalankan saat file dibuka
+        setTimeout(jalankanTes, 1000);
+    </script>
+</body>
+</html>
