@@ -288,6 +288,28 @@
         <p class="text-sm text-slate-400">&copy; <script>document.write(new Date().getFullYear())</script> Layanan eksklusif oleh <span id="footerVendorName" class="font-medium text-slate-500 dark:text-slate-300">Portal</span>.</p>
     </footer>
 
+    <!-- ============================================== -->
+    <!-- MODAL POPUP PREMIUM (GENERATE LINK)            -->
+    <!-- ============================================== -->
+    <div id="premiumModal" class="fixed inset-0 bg-slate-900/80 backdrop-blur-sm z-[100] hidden flex-col justify-center items-center opacity-0 transition-opacity duration-300 px-4">
+        <div class="bg-white dark:bg-slate-800 border border-transparent dark:border-slate-700 rounded-3xl max-w-md w-full p-8 shadow-2xl transform scale-95 transition-transform duration-300 text-center relative" id="premiumContent">
+            <div class="w-16 h-16 bg-blue-100 dark:bg-blue-900/50 text-blue-600 dark:text-blue-400 rounded-full flex items-center justify-center text-3xl mx-auto mb-4 shadow-inner">
+                <i class="fa-solid fa-lock"></i>
+            </div>
+            <h3 class="text-2xl font-bold text-slate-800 dark:text-white mb-2">Fitur Terkunci</h3>
+            <p class="text-slate-500 dark:text-slate-400 text-sm mb-6 leading-relaxed">Maaf, fitur pembuatan link akses otomatis (Generate Link) untuk klien hanya tersedia pada versi Full. Upgrade sekarang untuk pengalaman tanpa batas!</p>
+            
+            <div class="flex flex-col gap-3">
+                <a href="https://moodifypreset.myscalev.com/coquickselectandsorter" target="_blank" class="w-full py-3.5 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl transition shadow-lg text-sm flex justify-center items-center gap-2">
+                    <i class="fa-solid fa-cart-shopping"></i> Beli Versi Full Sekarang
+                </a>
+                <button onclick="closePremiumPopup()" class="w-full py-3.5 bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200 font-bold rounded-xl transition shadow-sm border border-slate-200 dark:border-slate-600 text-sm">
+                    Nanti Saja
+                </button>
+            </div>
+        </div>
+    </div>
+    <!-- ============================================== -->
     <!-- MODAL KUNCI LAYAR KETIKA WAKTU HABIS -->
     <div id="sessionEndedModal" class="fixed inset-0 bg-slate-900/95 backdrop-blur-md z-[9999] hidden flex-col justify-center items-center opacity-0 transition-opacity duration-500 px-4">
         <div class="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-3xl max-w-md w-full p-8 shadow-2xl text-center transform scale-95 transition-transform duration-500" id="sessionEndedContent">
