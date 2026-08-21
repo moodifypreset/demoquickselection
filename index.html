@@ -8,14 +8,43 @@
     <!-- 1. SCRIPT PENGATURAN HARUS DIMUAT LEBIH DULU -->
     <script src="pengaturan.js"></script>
 
-    <!-- 2. SCRIPT PELACAKAN IP & KUNCI LAYAR -->
+    <!-- 2. SCRIPT PELACAKAN IP, KUNCI LAYAR & TIMER -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script>
-        // PERBAIKAN: Gunakan variabel 'db' agar tidak error tabrakan nama
         const db = supabase.createClient(CONFIG_APP.supabaseUrl, CONFIG_APP.supabaseKey);
+        let demoTimerInterval;
 
-        // Fungsi Global untuk Mengunci Layar Seketika Tanpa Refresh
+        // Fungsi Memulai Waktu Mundur 5 Menit (300 Detik)
+        function startDemoTimer() {
+            let timeLeft = 300; 
+            const timerContainer = document.getElementById('demoTimerContainer');
+            const timerDisplay = document.getElementById('demoTimerDisplay');
+            
+            // Munculkan timer di layar
+            timerContainer.classList.remove('hidden');
+            timerContainer.classList.add('flex');
+
+            demoTimerInterval = setInterval(() => {
+                timeLeft--;
+                
+                // Format MM:SS
+                let m = Math.floor(timeLeft / 60).toString().padStart(2, '0');
+                let s = (timeLeft % 60).toString().padStart(2, '0');
+                timerDisplay.innerText = `${m}:${s}`;
+
+                // Jika waktu habis
+                if (timeLeft <= 0) {
+                    clearInterval(demoTimerInterval);
+                    lockAppDemo(); // Kunci aplikasi seketika!
+                }
+            }, 1000);
+        }
+
+        // Fungsi Global untuk Mengunci Layar Seketika
         function lockAppDemo() {
+            // Hentikan timer jika ada
+            if (typeof demoTimerInterval !== 'undefined') clearInterval(demoTimerInterval);
+
             const modal = document.getElementById('sessionEndedModal');
             const content = document.getElementById('sessionEndedContent');
             
@@ -38,7 +67,6 @@
                 const ipData = await ipRes.json();
                 const userIp = ipData.ip;
 
-                // Memakai 'db' untuk query ke database
                 const { data, error } = await db
                     .from('demo_tracking')
                     .select('ip_address')
@@ -48,10 +76,15 @@
                 if (error) console.error("Error cek IP Supabase:", error);
 
                 if (data) {
-                    lockAppDemo(); // Kunci layar jika IP sudah ada
+                    lockAppDemo();
                 } else {
                     const { error: insertError } = await db.from('demo_tracking').insert([{ ip_address: userIp }]);
-                    if (insertError) console.error("Gagal menyimpan IP:", insertError);
+                    if (insertError) {
+                        console.error("Gagal menyimpan IP:", insertError);
+                    } else {
+                        // Jika IP baru dan berhasil disimpan, jalankan TIMER
+                        startDemoTimer();
+                    }
                 }
             } catch (err) {
                 console.error("Sistem demo error:", err); 
@@ -133,6 +166,12 @@
 
             <!-- TOMBOL FITUR & ORDER -->
             <div class="flex items-center gap-2 w-full md:w-auto justify-center md:justify-end flex-wrap">
+                
+                <!-- INDIKATOR WAKTU MUNDUR DEMO -->
+                <div id="demoTimerContainer" class="hidden items-center justify-center px-3 py-1.5 bg-red-100 dark:bg-red-900/50 text-red-600 dark:text-red-400 rounded-lg text-sm font-bold shadow-sm border border-red-200 dark:border-red-800" title="Sisa Waktu Demo">
+                    <i class="fa-regular fa-clock animate-pulse mr-1.5"></i> <span id="demoTimerDisplay" class="font-mono">05:00</span>
+                </div>
+
                 <button onclick="showPremiumPopup()" class="flex items-center justify-center px-3 py-1.5 bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200 rounded-lg text-sm transition shadow-sm border border-slate-200 dark:border-slate-600" title="Generate Link">
                     <i class="fa-solid fa-link text-blue-600 dark:text-blue-400"></i> <span class="hidden lg:inline ml-1 font-bold">Generate Link</span>
                 </button>
@@ -272,7 +311,8 @@
             <i class="fa-solid fa-circle-info mt-0.5 text-blue-600 dark:text-blue-400"></i>
             <div>
                 <strong class="font-bold block mb-1">Informasi Penting Mode Demo:</strong>
-                Gunakan browser <b>Google Chrome</b> atau <b>Microsoft Edge</b>. Aplikasi ini mencari dan menyalin foto secara otomatis dan <b>dibatasi maksimal memproses 15 foto</b>.
+                Gunakan browser <b>Google Chrome</b> atau <b>Microsoft Edge</b>. Aplikasi ini mencari dan menyalin foto secara otomatis dan <b>dibatasi maksimal memproses 15 foto</b>. <br>
+                <span class="text-red-600 dark:text-red-400 font-bold mt-1 block"><i class="fa-solid fa-triangle-exclamation"></i> Peringatan: Jangan muat ulang (refresh) halaman ini agar sesi uji coba Anda tidak hangus (berlaku 1x per IP).</span>
             </div>
         </div>
 
@@ -389,10 +429,10 @@
                 <i class="fa-solid fa-stopwatch"></i>
             </div>
             <h3 class="text-2xl font-black text-slate-800 dark:text-white mb-3 uppercase tracking-wide">Batas Akses Habis</h3>
-            <p class="text-slate-500 dark:text-slate-400 text-sm mb-8 leading-relaxed">Akses Anda ditutup. Sesuai kebijakan kami, fitur demo dibatasi hanya untuk <b>satu kali percobaan</b>. Silakan beli versi full untuk akses tanpa batas dan pemrosesan tak terhingga.</p>
+            <p class="text-slate-500 dark:text-slate-400 text-sm mb-8 leading-relaxed">Akses Anda ditutup. Sesuai kebijakan kami, fitur demo dibatasi hanya untuk <b>satu kali percobaan</b> atau batas waktu maksimal <b>5 menit</b>.</p>
             
             <a href="https://moodifypreset.myscalev.com/coquickselectandsorter" target="_blank" class="w-full py-4 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl transition shadow-lg shadow-blue-600/30 text-sm flex justify-center items-center gap-2 uppercase tracking-wide">
-                <i class="fa-solid fa-cart-shopping text-lg"></i> Beli Versi Full
+                <i class="fa-solid fa-cart-shopping text-lg"></i> Beli Versi Full Sekarang
             </a>
         </div>
     </div>
